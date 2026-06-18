@@ -180,8 +180,8 @@ function renderPinnedStickers() {
     return;
   }
   
-  // Starred cards capped at 6
-  pinnedList.slice(0, 6).forEach(bookmark => {
+  // Starred cards capped at 10
+  pinnedList.slice(0, 10).forEach(bookmark => {
     const glyph = getGlyphForDomain(bookmark.url);
     const sticker = document.createElement('a');
     sticker.href = bookmark.url;
@@ -471,8 +471,8 @@ function togglePin(id) {
   
   if (!b.pinned) {
     const currentPinned = bookmarks.filter(x => x.pinned).length;
-    if (currentPinned >= 6) {
-      showToast(`Limit of 6 pinned bookmarks reached!`, true);
+    if (currentPinned >= 10) {
+      showToast(`Limit of 10 pinned bookmarks reached!`, true);
       return;
     }
   }
@@ -607,10 +607,10 @@ function handleGlobalKeydown(e) {
     return; // Skip hotkeys when editing text inputs
   }
 
-  // 1-6 number hotkeys for top pinned bookmarks
-  if (e.key >= '1' && e.key <= '6') {
+  // 1-10 number hotkeys for top pinned bookmarks (1-9 and 0)
+  if ((e.key >= '1' && e.key <= '9') || e.key === '0') {
     const pinnedList = bookmarks.filter(b => b.pinned);
-    const index = parseInt(e.key) - 1;
+    const index = e.key === '0' ? 9 : parseInt(e.key) - 1;
     if (pinnedList[index]) {
       e.preventDefault();
       playSound('click');
