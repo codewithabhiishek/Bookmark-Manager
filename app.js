@@ -400,6 +400,19 @@ function openEditCategoryModal(catKey) {
   editCatDialog.showModal();
 }
 
+function formatCategoryName(name) {
+  if (!name) return '';
+  // Trim and remove trailing slashes/whitespace
+  let cleanName = name.trim().replace(/\/+$/, '').trim();
+  
+  // Capitalize first letter of each word (word boundaries separated by spaces, dashes, etc.)
+  cleanName = cleanName.replace(/\b\w+\b/g, (word) => {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+  
+  return cleanName + '/';
+}
+
 function handleEditCategorySubmit(e) {
   e.preventDefault();
   const catKey = document.getElementById('edit-category-key').value;
@@ -407,9 +420,7 @@ function handleEditCategorySubmit(e) {
   
   if (!newName) return;
   
-  if (!newName.endsWith('/')) {
-    newName += '/';
-  }
+  newName = formatCategoryName(newName);
   
   if (categories[catKey]) {
     categories[catKey] = newName;
@@ -431,9 +442,7 @@ function handleAddCategorySubmit(e) {
   let name = document.getElementById('add-category-name').value.trim();
   if (!name) return;
 
-  if (!name.endsWith('/')) {
-    name += '/';
-  }
+  name = formatCategoryName(name);
 
   const newKey = 'custom_' + Date.now();
   categories[newKey] = name;
