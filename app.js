@@ -177,9 +177,21 @@ function renderPinnedStickers() {
     sticker.className = 'sticker';
     sticker.title = `${bookmark.title} (${bookmark.url})`;
     
+    let host = '';
+    try {
+      host = new URL(bookmark.url).hostname;
+    } catch (e) {}
+    
+    const iconUrl = host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '';
+    
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
-      <div class="glyph">${glyph}</div>
+      <div class="glyph">
+        ${iconUrl ? `
+          <img class="domain-icon" src="${iconUrl}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
+        ` : `<span>${glyph}</span>`}
+      </div>
       <div class="name">${bookmark.title}</div>
     `;
     
@@ -228,9 +240,16 @@ function renderCategoryCards() {
         const chipWrap = document.createElement('div');
         chipWrap.className = 'chip-wrapper';
         
+        let host = '';
+        try {
+          host = new URL(bookmark.url).hostname;
+        } catch (e) {}
+        const iconUrl = host ? `https://www.google.com/s2/favicons?sz=32&domain=${host}` : '';
+        
         chipWrap.innerHTML = `
           <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${bookmark.url}">
-            ${bookmark.title}
+            ${iconUrl ? `<img class="chip-icon" src="${iconUrl}" alt="" onerror="this.style.display='none'">` : ''}
+            <span>${bookmark.title}</span>
           </a>
           <div class="chip-actions">
             <button class="chip-btn btn-star-chip" title="${bookmark.pinned ? 'Unstar link' : 'Star/Pin link'}">★</button>
