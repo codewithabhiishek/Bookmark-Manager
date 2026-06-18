@@ -51,11 +51,19 @@ let filteredSearchResults = [];
 
 // DOM Elements
 const addDialog = document.getElementById('add-bookmark-dialog');
+const editDialog = document.getElementById('edit-bookmark-dialog');
 const searchDialog = document.getElementById('search-dialog');
 const addForm = document.getElementById('add-bookmark-form');
+const editForm = document.getElementById('edit-bookmark-form');
 const btnAddTrigger = document.getElementById('btn-add-trigger');
 const btnCloseAdd = document.getElementById('btn-close-add');
 const btnCancelAdd = document.getElementById('btn-cancel-add');
+const btnCloseEdit = document.getElementById('btn-close-edit');
+const btnCancelEdit = document.getElementById('btn-cancel-edit');
+const editBookmarkId = document.getElementById('edit-bookmark-id');
+const editBookmarkUrl = document.getElementById('edit-bookmark-url');
+const editBookmarkTitle = document.getElementById('edit-bookmark-title');
+const editBookmarkCategory = document.getElementById('edit-bookmark-category');
 const searchInput = document.getElementById('search-input');
 const searchResultsContainer = document.getElementById('search-results');
 const toastContainer = document.getElementById('toast-container');
@@ -74,6 +82,11 @@ function init() {
   btnCancelAdd.addEventListener('click', () => { playSound('click'); addDialog.close(); });
   addForm.addEventListener('submit', handleAddBookmarkSubmit);
   
+  // Edit Modal toggle listeners
+  btnCloseEdit.addEventListener('click', () => { playSound('click'); editDialog.close(); });
+  btnCancelEdit.addEventListener('click', () => { playSound('click'); editDialog.close(); });
+  editForm.addEventListener('submit', handleEditBookmarkSubmit);
+  
   // Search actions
   searchInput.addEventListener('input', handleSearchInput);
   
@@ -84,7 +97,7 @@ function init() {
   searchDialog.addEventListener('keydown', handleSearchNavigation);
 
   // Close dialog on backdrop click
-  [addDialog, searchDialog].forEach(dialog => {
+  [addDialog, searchDialog, editDialog].forEach(dialog => {
     dialog.addEventListener('click', (e) => {
       const rect = dialog.getBoundingClientRect();
       const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
@@ -253,6 +266,7 @@ function renderCategoryCards() {
           </a>
           <div class="chip-actions">
             <button class="chip-btn btn-star-chip" title="${bookmark.pinned ? 'Unstar link' : 'Star/Pin link'}">★</button>
+            <button class="chip-btn btn-edit-chip" title="Edit link">✎</button>
             <button class="chip-btn btn-copy-chip" title="Copy share link">❐</button>
             <button class="chip-btn btn-delete-chip" title="Delete link">✖</button>
           </div>
@@ -263,6 +277,10 @@ function renderCategoryCards() {
         chipWrap.querySelector('.btn-star-chip').addEventListener('click', (e) => {
           e.preventDefault();
           togglePin(bookmark.id);
+        });
+        chipWrap.querySelector('.btn-edit-chip').addEventListener('click', (e) => {
+          e.preventDefault();
+          openEditModal(bookmark.id);
         });
         chipWrap.querySelector('.btn-copy-chip').addEventListener('click', (e) => {
           e.preventDefault();
@@ -297,14 +315,21 @@ function renderCategoryCards() {
 
 function syncCategoryDropdown() {
   const select = document.getElementById('bookmark-category');
+  const editSelect = document.getElementById('edit-bookmark-category');
   if (!select) return;
   select.innerHTML = '';
+  if (editSelect) editSelect.innerHTML = '';
   
   Object.keys(categories).forEach(key => {
     const opt = document.createElement('option');
     opt.value = key;
     opt.textContent = categories[key];
     select.appendChild(opt);
+    
+    if (editSelect) {
+      const optEdit = opt.cloneNode(true);
+      editSelect.appendChild(optEdit);
+    }
   });
 }
 
@@ -340,6 +365,55 @@ function openAddModal(preSelectedCat = '') {
     document.getElementById('bookmark-category').value = preSelectedCat;
   }
   addDialog.showModal();
+}
+
+function openEditModal(id) {
+  const b = bookmarks.find(x => x.id === id);
+  if (!b) return;
+  
+  editBookmarkId.value = b.id;
+  editBookmarkUrl.value = b.url;
+  editBookmarkTitle.value = b.title;
+  editBookmarkCategory.value = b.category;
+  
+  editDialog.showModal();
+}
+
+function handleEditBookmarkSubmit(e) {
+  e.preventDefault();
+  const id = editBookmarkId.value;
+  let url = editBookmarkUrl.value.trim();
+  let title = editBookmarkTitle.value.trim();
+  const category = editBookmarkCategory.value;
+  
+  if (!url) return;
+  
+  // Prepend https:// if protocol is missing
+  if (!/^https?:\/\//i.test(url)) {
+    url = 'https://' + url;
+  }
+  
+  if (!title) {
+    try {
+      const hostname = new URL(url).hostname;
+      title = hostname.replace('www.', '');
+    } catch (e) {
+      title = url;
+    }
+  }
+  
+  const b = bookmarks.find(x => x.id === id);
+  if (b) {
+    b.url = url;
+    b.title = title;
+    b.category = category;
+    
+    saveState();
+    renderAll();
+    playSound('success');
+    editDialog.close();
+    showToast(`Updated link "${title}"`);
+  }
 }
 
 function handleAddBookmarkSubmit(e) {

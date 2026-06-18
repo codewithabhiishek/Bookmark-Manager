@@ -84,6 +84,38 @@
   </form>
 </dialog>
 
+<!-- Edit Bookmark Modal Dialog -->
+<dialog id="edit-bookmark-dialog">
+  <div class="dialog-header">
+    <h3>:: EDIT LINK ::</h3>
+    <button class="btn-retro-close" id="btn-close-edit" type="button" aria-label="Close dialog">[X]</button>
+  </div>
+  <form id="edit-bookmark-form" method="dialog">
+    <input type="hidden" id="edit-bookmark-id">
+    <div class="dialog-body">
+      <div class="form-group">
+        <label for="edit-bookmark-url">> URL:</label>
+        <input type="url" id="edit-bookmark-url" class="form-control" placeholder="https://example.com" required autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="edit-bookmark-title">> TITLE:</label>
+        <input type="text" id="edit-bookmark-title" class="form-control" placeholder="Optional Title" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="edit-bookmark-category">> CATEGORY:</label>
+        <select id="edit-bookmark-category" class="form-control" required>
+          <!-- Synced dynamically by app.js -->
+        </select>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn-retro-secondary" id="btn-cancel-edit">[ CANCEL ]</button>
+      <button type="submit" class="btn-retro-primary" id="btn-submit-edit">[ SAVE ]</button>
+    </div>
+  </form>
+</dialog>
+
+
 <!-- Search Command Palette Dialog (Retro Terminal Theme) -->
 <dialog id="search-dialog">
   <div class="search-dialog-container">
