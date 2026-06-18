@@ -26,12 +26,12 @@ const defaultBookmarks = [
 ];
 
 const defaultCategories = {
-  dev: 'dev-tools/',
-  design: 'design-frontend/',
-  learning: 'learning/',
-  freelance: 'freelance-tools/',
-  personal: 'personal/',
-  fun: 'fun-websites/'
+  dev: 'Dev-Tools/',
+  design: 'Design-Frontend/',
+  learning: 'Learning/',
+  freelance: 'Freelance-Tools/',
+  personal: 'Personal/',
+  fun: 'Fun-Websites/'
 };
 
 const categoryColors = {
@@ -44,8 +44,8 @@ const categoryColors = {
 };
 
 // Application State
-let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v3')) || defaultBookmarks;
-let categories = JSON.parse(localStorage.getItem('zenmark_categories_v3')) || defaultCategories;
+let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v4')) || defaultBookmarks;
+let categories = JSON.parse(localStorage.getItem('zenmark_categories_v4')) || defaultCategories;
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 
@@ -310,8 +310,8 @@ function syncCategoryDropdown() {
 
 // Logic Events
 function saveState() {
-  localStorage.setItem('zenmark_bookmarks_v3', JSON.stringify(bookmarks));
-  localStorage.setItem('zenmark_categories_v3', JSON.stringify(categories));
+  localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
+  localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
 }
 
 function handleCategoryRename(e) {
