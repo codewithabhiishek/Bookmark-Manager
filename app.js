@@ -10,12 +10,19 @@ const defaultBookmarks = [
   { id: '8', title: 'Firebase', url: 'https://firebase.google.com', category: 'dev', pinned: false },
   { id: '9', title: 'Vercel', url: 'https://vercel.com', category: 'dev', pinned: true },
   { id: '10', title: 'Wooble', url: 'https://wooble.ai', category: 'design', pinned: false },
-  { id: '11', title: 'Github', url: 'https://github.com', category: 'dev', pinned: true },
-  { id: '12', title: 'AuraBuild', url: 'https://aurabuild.co', category: 'freelance', pinned: false },
-  { id: '13', title: 'Web3Forms', url: 'https://web3forms.com', category: 'freelance', pinned: false },
-  { id: '14', title: 'My-Portfolio', url: 'https://my-portfolio.com', category: 'personal', pinned: false },
-  { id: '15', title: 'Skills Directory', url: 'https://skillsdirectory.dev', category: 'learning', pinned: false },
-  { id: '16', title: 'Free for Developers', url: 'https://free-for.dev', category: 'learning', pinned: true }
+  { id: '11', title: 'Figma', url: 'https://figma.com', category: 'design', pinned: false },
+  { id: '12', title: 'Coolors', url: 'https://coolors.co', category: 'design', pinned: false },
+  { id: '13', title: 'Dribbble', url: 'https://dribbble.com', category: 'design', pinned: false },
+  { id: '14', title: 'Github', url: 'https://github.com', category: 'dev', pinned: true },
+  { id: '15', title: 'AuraBuild', url: 'https://aurabuild.co', category: 'freelance', pinned: false },
+  { id: '16', title: 'Web3Forms', url: 'https://web3forms.com', category: 'freelance', pinned: false },
+  { id: '17', title: 'My-Portfolio', url: 'https://my-portfolio.com', category: 'personal', pinned: false },
+  { id: '18', title: 'Skills Directory', url: 'https://skillsdirectory.dev', category: 'learning', pinned: false },
+  { id: '19', title: 'Free for Developers', url: 'https://free-for.dev', category: 'learning', pinned: true },
+  { id: '20', title: 'Neal.fun', url: 'https://neal.fun', category: 'fun', pinned: false },
+  { id: '21', title: 'Pointer Pointer', url: 'https://pointerpointer.com', category: 'fun', pinned: false },
+  { id: '22', title: 'Radio Garden', url: 'https://radio.garden', category: 'fun', pinned: false },
+  { id: '23', title: 'A Soft Murmur', url: 'https://asoftmurmur.com', category: 'fun', pinned: false }
 ];
 
 const defaultCategories = {
@@ -23,7 +30,8 @@ const defaultCategories = {
   design: 'design-frontend/',
   learning: 'learning/',
   freelance: 'freelance-tools/',
-  personal: 'personal/'
+  personal: 'personal/',
+  fun: 'fun-websites/'
 };
 
 const categoryColors = {
@@ -31,12 +39,13 @@ const categoryColors = {
   design: 'var(--pink)',
   learning: 'var(--amber)',
   freelance: 'var(--cyan)',
-  personal: '#aaa'
+  personal: '#aaa',
+  fun: '#c084fc'
 };
 
 // Application State
-let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v2')) || defaultBookmarks;
-let categories = JSON.parse(localStorage.getItem('zenmark_categories_v2')) || defaultCategories;
+let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v3')) || defaultBookmarks;
+let categories = JSON.parse(localStorage.getItem('zenmark_categories_v3')) || defaultCategories;
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 
@@ -282,8 +291,8 @@ function syncCategoryDropdown() {
 
 // Logic Events
 function saveState() {
-  localStorage.setItem('zenmark_bookmarks_v2', JSON.stringify(bookmarks));
-  localStorage.setItem('zenmark_categories_v2', JSON.stringify(categories));
+  localStorage.setItem('zenmark_bookmarks_v3', JSON.stringify(bookmarks));
+  localStorage.setItem('zenmark_categories_v3', JSON.stringify(categories));
 }
 
 function handleCategoryRename(e) {
@@ -542,6 +551,12 @@ function getGlyphForDomain(url) {
     if (host.includes('claude')) return '✿';
     if (host.includes('firebase')) return '🔥';
     if (host.includes('wooble')) return 'W';
+    if (host.includes('coolors')) return '🎨';
+    if (host.includes('dribbble')) return '🏀';
+    if (host.includes('neal.fun')) return '🎈';
+    if (host.includes('pointerpointer')) return '☞';
+    if (host.includes('radio.garden')) return '📻';
+    if (host.includes('asoftmurmur')) return '🌊';
     if (host.includes('aurabuild')) return '⏏';
     if (host.includes('web3forms')) return '▩';
     if (host.includes('my-portfolio') || host.includes('myportfolio')) return '💻';
