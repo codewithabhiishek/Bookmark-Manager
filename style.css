@@ -442,6 +442,20 @@ body {
   color: var(--pink);
 }
 
+.btn-card-edit-cat {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.btn-card-edit-cat:hover {
+  color: var(--amber);
+}
+
 /* Retro monospaced buttons */
 .btn-retro {
   background: transparent;

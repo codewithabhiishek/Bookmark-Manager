@@ -94,6 +94,11 @@ const toastContainer = document.getElementById('toast-container');
 const pinStrip = document.getElementById('pin-strip');
 const categoriesBoard = document.getElementById('categories-board');
 
+const editCatDialog = document.getElementById('edit-category-dialog');
+const editCatForm = document.getElementById('edit-category-form');
+const btnCloseEditCat = document.getElementById('btn-close-edit-cat');
+const btnCancelEditCat = document.getElementById('btn-cancel-edit-cat');
+
 // Event Listeners Initialization
 // Event Listeners Initialization
 function init() {
@@ -158,8 +163,13 @@ function init() {
   // Search Modal Navigation Keys
   searchDialog.addEventListener('keydown', handleSearchNavigation);
 
+  // Edit Category Modal toggle listeners
+  btnCloseEditCat.addEventListener('click', () => { playSound('click'); editCatDialog.close(); });
+  btnCancelEditCat.addEventListener('click', () => { playSound('click'); editCatDialog.close(); });
+  editCatForm.addEventListener('submit', handleEditCategorySubmit);
+
   // Close dialog on backdrop click
-  [addDialog, searchDialog, editDialog].forEach(dialog => {
+  [addDialog, searchDialog, editDialog, editCatDialog].forEach(dialog => {
     dialog.addEventListener('click', (e) => {
       const rect = dialog.getBoundingClientRect();
       const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
@@ -299,9 +309,10 @@ function renderCategoryCards() {
     card.innerHTML = `
       <div class="tape"></div>
       <div class="card-title-container">
-        <input type="text" class="card-title-input" value="${titleValue}" data-key="${catKey}" aria-label="Rename Category">
+        <input type="text" class="card-title-input" value="${titleValue}" data-key="${catKey}" aria-label="Rename Category" readonly>
         <div class="card-title-actions">
           <button class="btn-card-add" data-cat="${catKey}" title="Add link to ${catName}">[+]</button>
+          <button class="btn-card-edit-cat" data-cat="${catKey}" title="Rename category ${catName}">[✎]</button>
           <button class="btn-card-delete" data-cat="${catKey}" title="Delete category ${catName}">[✖]</button>
         </div>
       </div>
@@ -360,18 +371,14 @@ function renderCategoryCards() {
       });
     }
     
-    // Bind card header title rename events
-    const titleInput = card.querySelector('.card-title-input');
-    titleInput.addEventListener('blur', handleCategoryRename);
-    titleInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        titleInput.blur();
-      }
-    });
-    
     // Bind Card Quick Add [+]
     card.querySelector('.btn-card-add').addEventListener('click', (e) => {
       openAddModal(catKey);
+    });
+    
+    // Bind Card Rename [✎]
+    card.querySelector('.btn-card-edit-cat').addEventListener('click', (e) => {
+      openEditCategoryModal(catKey);
     });
     
     // Bind Card Delete [✖]
@@ -420,23 +427,35 @@ function saveState() {
   localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
 }
 
-function handleCategoryRename(e) {
-  const input = e.target;
-  const key = input.getAttribute('data-key');
-  let newName = input.value.trim();
+function openEditCategoryModal(catKey) {
+  const catName = categories[catKey];
+  if (!catName) return;
   
-  // Ensure title suffix matches directory feel
-  if (newName && !newName.endsWith('/')) {
+  document.getElementById('edit-category-key').value = catKey;
+  const cleanName = catName.endsWith('/') ? catName.slice(0, -1) : catName;
+  document.getElementById('edit-category-name').value = cleanName;
+  
+  editCatDialog.showModal();
+}
+
+function handleEditCategorySubmit(e) {
+  e.preventDefault();
+  const catKey = document.getElementById('edit-category-key').value;
+  let newName = document.getElementById('edit-category-name').value.trim();
+  
+  if (!newName) return;
+  
+  if (!newName.endsWith('/')) {
     newName += '/';
   }
   
-  if (newName && newName !== categories[key]) {
-    categories[key] = newName;
+  if (categories[catKey]) {
+    categories[catKey] = newName;
     saveState();
     renderAll();
-    showToast(`Renamed to "${newName}"`);
-  } else {
-    input.value = categories[key];
+    playSound('success');
+    editCatDialog.close();
+    showToast(`Renamed category to "${newName}"`);
   }
 }
 
@@ -581,24 +600,15 @@ function deleteBookmark(id) {
 
 function deleteCategory(catKey) {
   const catName = categories[catKey] || catKey;
-  const catBookmarks = bookmarks.filter(b => b.category === catKey);
+  // Remove bookmarks belonging to this category
+  bookmarks = bookmarks.filter(b => b.category !== catKey);
+  // Remove category from state
+  delete categories[catKey];
   
-  let confirmMsg = `Are you sure you want to delete the category "${catName}"?`;
-  if (catBookmarks.length > 0) {
-    confirmMsg += `\nThis will also delete the ${catBookmarks.length} link(s) inside it.`;
-  }
-  
-  if (confirm(confirmMsg)) {
-    // Remove bookmarks belonging to this category
-    bookmarks = bookmarks.filter(b => b.category !== catKey);
-    // Remove category from state
-    delete categories[catKey];
-    
-    saveState();
-    renderAll();
-    playSound('click');
-    showToast(`Deleted category "${catName}"`);
-  }
+  saveState();
+  renderAll();
+  playSound('click');
+  showToast(`Deleted category "${catName}"`);
 }
 
 function togglePin(id) {
