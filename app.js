@@ -31,7 +31,8 @@ const defaultCategories = {
   learning: 'Learning/',
   freelance: 'Freelance-Tools/',
   personal: 'Personal/',
-  fun: 'Fun-Websites/'
+  fun: 'Fun-Websites/',
+  vibe: 'Vibe-Coding/'
 };
 
 const categoryColors = {
@@ -40,12 +41,35 @@ const categoryColors = {
   learning: 'var(--amber)',
   freelance: 'var(--cyan)',
   personal: '#aaa',
-  fun: '#c084fc'
+  fun: '#c084fc',
+  vibe: 'var(--pink)'
 };
+
+const retroColorPool = [
+  'var(--green)',
+  'var(--pink)',
+  'var(--amber)',
+  'var(--cyan)',
+  '#c084fc',
+  '#f97316',
+  '#f43f5e',
+  '#06b6d4'
+];
+
+function getCategoryColor(catKey) {
+  if (categoryColors[catKey]) return categoryColors[catKey];
+  let hash = 0;
+  for (let i = 0; i < catKey.length; i++) {
+    hash = catKey.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % retroColorPool.length;
+  return retroColorPool[index];
+}
 
 // Application State
 let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v4')) || defaultBookmarks;
 let categories = JSON.parse(localStorage.getItem('zenmark_categories_v4')) || defaultCategories;
+categories = { ...defaultCategories, ...categories };
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 
@@ -96,6 +120,37 @@ function init() {
   
   // Search actions
   searchInput.addEventListener('input', handleSearchInput);
+  
+  // Category dropdown change listeners for new category creation
+  const addCategorySelect = document.getElementById('bookmark-category');
+  const addCategoryGroup = document.getElementById('add-new-category-group');
+  const addCategoryName = document.getElementById('add-new-category-name');
+  
+  addCategorySelect.addEventListener('change', () => {
+    if (addCategorySelect.value === '__new__') {
+      addCategoryGroup.style.display = 'block';
+      addCategoryName.setAttribute('required', 'true');
+      addCategoryName.focus();
+    } else {
+      addCategoryGroup.style.display = 'none';
+      addCategoryName.removeAttribute('required');
+    }
+  });
+
+  const editCategorySelect = document.getElementById('edit-bookmark-category');
+  const editCategoryGroup = document.getElementById('edit-new-category-group');
+  const editCategoryName = document.getElementById('edit-new-category-name');
+
+  editCategorySelect.addEventListener('change', () => {
+    if (editCategorySelect.value === '__new__') {
+      editCategoryGroup.style.display = 'block';
+      editCategoryName.setAttribute('required', 'true');
+      editCategoryName.focus();
+    } else {
+      editCategoryGroup.style.display = 'none';
+      editCategoryName.removeAttribute('required');
+    }
+  });
   
   // Global '/' shortcut key
   window.addEventListener('keydown', handleGlobalKeydown);
@@ -229,7 +284,7 @@ function renderCategoryCards() {
   categoryKeys.forEach(catKey => {
     const catName = categories[catKey];
     const catBookmarks = bookmarks.filter(b => b.category === catKey);
-    const cardColor = categoryColors[catKey] || 'var(--green)';
+    const cardColor = getCategoryColor(catKey);
     
     // Sort bookmarks alphabetically
     catBookmarks.sort((a, b) => a.title.localeCompare(b.title));
@@ -338,6 +393,18 @@ function syncCategoryDropdown() {
       editSelect.appendChild(optEdit);
     }
   });
+
+  // Add Create New Category option at the bottom
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '+ CREATE NEW CATEGORY...';
+  select.appendChild(newOpt);
+  
+  if (editSelect) {
+    const editNewOpt = newOpt.cloneNode(true);
+    editSelect.appendChild(editNewOpt);
+  }
+}
 }
 
 // Logic Events
@@ -368,6 +435,8 @@ function handleCategoryRename(e) {
 
 function openAddModal(preSelectedCat = '') {
   addForm.reset();
+  document.getElementById('add-new-category-group').style.display = 'none';
+  document.getElementById('add-new-category-name').removeAttribute('required');
   if (preSelectedCat) {
     document.getElementById('bookmark-category').value = preSelectedCat;
   }
@@ -383,6 +452,9 @@ function openEditModal(id) {
   editBookmarkTitle.value = b.title;
   editBookmarkCategory.value = b.category;
   
+  document.getElementById('edit-new-category-group').style.display = 'none';
+  document.getElementById('edit-new-category-name').removeAttribute('required');
+  
   editDialog.showModal();
 }
 
@@ -391,7 +463,7 @@ function handleEditBookmarkSubmit(e) {
   const id = editBookmarkId.value;
   let url = editBookmarkUrl.value.trim();
   let title = editBookmarkTitle.value.trim();
-  const category = editBookmarkCategory.value;
+  let category = editBookmarkCategory.value;
   
   if (!url) return;
   
@@ -406,6 +478,20 @@ function handleEditBookmarkSubmit(e) {
       title = hostname.replace('www.', '');
     } catch (e) {
       title = url;
+    }
+  }
+  
+  if (category === '__new__') {
+    const newNameInput = document.getElementById('edit-new-category-name');
+    let customName = newNameInput.value.trim();
+    if (customName) {
+      if (!customName.endsWith('/')) {
+        customName += '/';
+      }
+      category = 'custom_' + Date.now();
+      categories[category] = customName;
+    } else {
+      category = 'personal'; // fallback
     }
   }
   
@@ -427,7 +513,7 @@ function handleAddBookmarkSubmit(e) {
   e.preventDefault();
   let url = document.getElementById('bookmark-url').value.trim();
   let title = document.getElementById('bookmark-title').value.trim();
-  const category = document.getElementById('bookmark-category').value;
+  let category = document.getElementById('bookmark-category').value;
   
   if (!url) return;
   
@@ -442,6 +528,20 @@ function handleAddBookmarkSubmit(e) {
       title = hostname.replace('www.', '');
     } catch (e) {
       title = url;
+    }
+  }
+  
+  if (category === '__new__') {
+    const newNameInput = document.getElementById('add-new-category-name');
+    let customName = newNameInput.value.trim();
+    if (customName) {
+      if (!customName.endsWith('/')) {
+        customName += '/';
+      }
+      category = 'custom_' + Date.now();
+      categories[category] = customName;
+    } else {
+      category = 'personal'; // fallback
     }
   }
   
