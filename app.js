@@ -110,6 +110,10 @@ const btnAddCategoryTrigger = document.getElementById('btn-add-category-trigger'
 function init() {
   renderAll();
   rotateMarqueeLogs();
+  
+  // Sync bookmarks and categories with Upstash Redis
+  syncFromCloud();
+
   // Modal toggle listeners
   btnAddTrigger.addEventListener('click', () => { playSound('click'); openAddModal(); });
   btnCloseAdd.addEventListener('click', () => { playSound('click'); addDialog.close(); });
@@ -387,6 +391,45 @@ function syncCategoryDropdown() {
 function saveState() {
   localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
   localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
+  syncToCloud();
+}
+
+async function syncToCloud() {
+  try {
+    const payload = { bookmarks, categories };
+    const res = await fetch('/api/bookmarks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      console.warn('[Sync] Failed to sync data to Vercel KV database.');
+    }
+  } catch (err) {
+    console.error('[Sync] Error syncing to cloud:', err);
+  }
+}
+
+async function syncFromCloud() {
+  try {
+    const res = await fetch('/api/bookmarks');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.bookmarks && data.categories) {
+        bookmarks = data.bookmarks;
+        categories = data.categories;
+        localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
+        localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
+        renderAll();
+        console.log('[Sync] Successfully synchronized data from Vercel KV database.');
+      } else {
+        console.log('[Sync] Cloud is empty. Initializing cloud database with local data...');
+        await syncToCloud();
+      }
+    }
+  } catch (err) {
+    console.error('[Sync] Error syncing from cloud:', err);
+  }
 }
 
 function openEditCategoryModal(catKey) {
