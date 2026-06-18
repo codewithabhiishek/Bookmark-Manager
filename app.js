@@ -423,8 +423,14 @@ async function syncFromCloud() {
         renderAll();
         console.log('[Sync] Successfully synchronized data from Vercel KV database.');
       } else {
-        console.log('[Sync] Cloud is empty. Initializing cloud database with local data...');
-        await syncToCloud();
+        // Cloud is empty. Only initialize/upload if this client actually has existing local storage data.
+        const hasLocalStorage = localStorage.getItem('zenmark_bookmarks_v4') !== null;
+        if (hasLocalStorage) {
+          console.log('[Sync] Cloud is empty. Initializing cloud database with local data...');
+          await syncToCloud();
+        } else {
+          console.log('[Sync] Cloud is empty, and local storage is empty. Waiting for data.');
+        }
       }
     }
   } catch (err) {
