@@ -405,7 +405,6 @@ function syncCategoryDropdown() {
     editSelect.appendChild(editNewOpt);
   }
 }
-}
 
 // Logic Events
 function saveState() {
