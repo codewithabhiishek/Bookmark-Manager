@@ -216,6 +216,10 @@ body {
   height: 24px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 2.5px;
+  box-sizing: border-box;
 }
 
 .sticker .name {
@@ -331,6 +335,9 @@ body {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   flex-shrink: 0;
+  background: #ffffff;
+  padding: 1.5px;
+  box-sizing: border-box;
 }
 
 .chip:hover {
