@@ -208,17 +208,15 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 24px;
+  height: 28px;
 }
 
 .domain-icon {
-  width: 24px;
-  height: 24px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  width: 28px;
+  height: 28px;
   background: #ffffff;
-  border-radius: 4px;
-  padding: 2.5px;
+  border-radius: 6px;
+  padding: 4px;
   box-sizing: border-box;
 }
 
@@ -329,14 +327,12 @@ body {
 }
 
 .chip-icon {
-  width: 13px;
-  height: 13px;
-  border-radius: 2px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
   flex-shrink: 0;
   background: #ffffff;
-  padding: 1.5px;
+  padding: 2px;
   box-sizing: border-box;
 }
 
