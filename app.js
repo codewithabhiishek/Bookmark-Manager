@@ -226,7 +226,7 @@ function renderAll() {
 function renderMarquee() {
   const textEl = document.getElementById('marquee-text');
   if (textEl) {
-    textEl.textContent = `» jugaad mode: on • ${bookmarks.length} bookmarks loaded • status: synced • welcome back guest «`;
+    textEl.textContent = `» jugaad mode: on • ${bookmarks.length} bookmarks loaded • status: synced • welcome back abhishek «`;
   }
 }
 
@@ -300,7 +300,10 @@ function renderCategoryCards() {
       <div class="tape"></div>
       <div class="card-title-container">
         <input type="text" class="card-title-input" value="${titleValue}" data-key="${catKey}" aria-label="Rename Category">
-        <button class="btn-card-add" data-cat="${catKey}" title="Add link to ${catName}">[+]</button>
+        <div class="card-title-actions">
+          <button class="btn-card-add" data-cat="${catKey}" title="Add link to ${catName}">[+]</button>
+          <button class="btn-card-delete" data-cat="${catKey}" title="Delete category ${catName}">[✖]</button>
+        </div>
       </div>
       <div class="card-count">${catBookmarks.length} links</div>
       <div class="chip-list" id="chip-list-${catKey}"></div>
@@ -369,6 +372,11 @@ function renderCategoryCards() {
     // Bind Card Quick Add [+]
     card.querySelector('.btn-card-add').addEventListener('click', (e) => {
       openAddModal(catKey);
+    });
+    
+    // Bind Card Delete [✖]
+    card.querySelector('.btn-card-delete').addEventListener('click', (e) => {
+      deleteCategory(catKey);
     });
     
     categoriesBoard.appendChild(card);
@@ -569,6 +577,28 @@ function deleteBookmark(id) {
   renderAll();
   playSound('click');
   showToast(`Deleted link "${b.title}"`);
+}
+
+function deleteCategory(catKey) {
+  const catName = categories[catKey] || catKey;
+  const catBookmarks = bookmarks.filter(b => b.category === catKey);
+  
+  let confirmMsg = `Are you sure you want to delete the category "${catName}"?`;
+  if (catBookmarks.length > 0) {
+    confirmMsg += `\nThis will also delete the ${catBookmarks.length} link(s) inside it.`;
+  }
+  
+  if (confirm(confirmMsg)) {
+    // Remove bookmarks belonging to this category
+    bookmarks = bookmarks.filter(b => b.category !== catKey);
+    // Remove category from state
+    delete categories[catKey];
+    
+    saveState();
+    renderAll();
+    playSound('click');
+    showToast(`Deleted category "${catName}"`);
+  }
 }
 
 function togglePin(id) {
@@ -792,11 +822,10 @@ function showToast(message, isWarning = false) {
 const sysLogs = [
   "jugaad mode: active",
   "system status: nominal",
-  "listening on local port 8000",
   "localstorage database: synced",
   "press '/' key for search hub",
   "scanline display frequency: 60hz",
-  "welcome guest @localhost"
+  "welcome abhishek @localhost"
 ];
 let currentLogIndex = 0;
 
@@ -806,7 +835,7 @@ function rotateMarqueeLogs() {
   
   setInterval(() => {
     currentLogIndex = (currentLogIndex + 1) % sysLogs.length;
-    const msg = `» ${sysLogs[currentLogIndex].toUpperCase()} • ${bookmarks.length} BOOKMARKS LOADED • STATUS: SYNCED • WELCOME BACK GUEST «`;
+    const msg = `» ${sysLogs[currentLogIndex].toUpperCase()} • ${bookmarks.length} BOOKMARKS LOADED • STATUS: SYNCED • WELCOME BACK ABHISHEK «`;
     marqueeText.textContent = msg;
   }, 4000);
 }

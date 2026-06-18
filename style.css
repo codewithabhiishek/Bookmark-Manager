@@ -273,7 +273,7 @@ body {
   color: var(--card-color, var(--green));
   border: 1px solid transparent;
   background: transparent;
-  width: 85%;
+  width: 70%;
   border-radius: 4px;
   padding: 2px 4px;
 }
@@ -421,6 +421,25 @@ body {
 
 .btn-card-add:hover {
   color: var(--green);
+}
+
+.card-title-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-card-delete {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.btn-card-delete:hover {
+  color: var(--pink);
 }
 
 /* Retro monospaced buttons */
