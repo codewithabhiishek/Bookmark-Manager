@@ -99,6 +99,12 @@ const editCatForm = document.getElementById('edit-category-form');
 const btnCloseEditCat = document.getElementById('btn-close-edit-cat');
 const btnCancelEditCat = document.getElementById('btn-cancel-edit-cat');
 
+const addCatDialog = document.getElementById('add-category-dialog');
+const addCatForm = document.getElementById('add-category-form');
+const btnCloseAddCat = document.getElementById('btn-close-add-cat');
+const btnCancelAddCat = document.getElementById('btn-cancel-add-cat');
+const btnAddCategoryTrigger = document.getElementById('btn-add-category-trigger');
+
 // Event Listeners Initialization
 // Event Listeners Initialization
 function init() {
@@ -126,42 +132,17 @@ function init() {
   // Search actions
   searchInput.addEventListener('input', handleSearchInput);
   
-  // Category dropdown change listeners for new category creation
-  const addCategorySelect = document.getElementById('bookmark-category');
-  const addCategoryGroup = document.getElementById('add-new-category-group');
-  const addCategoryName = document.getElementById('add-new-category-name');
-  
-  addCategorySelect.addEventListener('change', () => {
-    if (addCategorySelect.value === '__new__') {
-      addCategoryGroup.style.display = 'block';
-      addCategoryName.setAttribute('required', 'true');
-      addCategoryName.focus();
-    } else {
-      addCategoryGroup.style.display = 'none';
-      addCategoryName.removeAttribute('required');
-    }
-  });
-
-  const editCategorySelect = document.getElementById('edit-bookmark-category');
-  const editCategoryGroup = document.getElementById('edit-new-category-group');
-  const editCategoryName = document.getElementById('edit-new-category-name');
-
-  editCategorySelect.addEventListener('change', () => {
-    if (editCategorySelect.value === '__new__') {
-      editCategoryGroup.style.display = 'block';
-      editCategoryName.setAttribute('required', 'true');
-      editCategoryName.focus();
-    } else {
-      editCategoryGroup.style.display = 'none';
-      editCategoryName.removeAttribute('required');
-    }
-  });
-  
   // Global '/' shortcut key
   window.addEventListener('keydown', handleGlobalKeydown);
   
   // Search Modal Navigation Keys
   searchDialog.addEventListener('keydown', handleSearchNavigation);
+
+  // Add Category Modal toggle listeners
+  btnAddCategoryTrigger.addEventListener('click', () => { playSound('click'); openAddCategoryModal(); });
+  btnCloseAddCat.addEventListener('click', () => { playSound('click'); addCatDialog.close(); });
+  btnCancelAddCat.addEventListener('click', () => { playSound('click'); addCatDialog.close(); });
+  addCatForm.addEventListener('submit', handleAddCategorySubmit);
 
   // Edit Category Modal toggle listeners
   btnCloseEditCat.addEventListener('click', () => { playSound('click'); editCatDialog.close(); });
@@ -169,7 +150,7 @@ function init() {
   editCatForm.addEventListener('submit', handleEditCategorySubmit);
 
   // Close dialog on backdrop click
-  [addDialog, searchDialog, editDialog, editCatDialog].forEach(dialog => {
+  [addDialog, searchDialog, editDialog, editCatDialog, addCatDialog].forEach(dialog => {
     dialog.addEventListener('click', (e) => {
       const rect = dialog.getBoundingClientRect();
       const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
@@ -408,17 +389,6 @@ function syncCategoryDropdown() {
       editSelect.appendChild(optEdit);
     }
   });
-
-  // Add Create New Category option at the bottom
-  const newOpt = document.createElement('option');
-  newOpt.value = '__new__';
-  newOpt.textContent = '+ CREATE NEW CATEGORY...';
-  select.appendChild(newOpt);
-  
-  if (editSelect) {
-    const editNewOpt = newOpt.cloneNode(true);
-    editSelect.appendChild(editNewOpt);
-  }
 }
 
 // Logic Events
@@ -459,10 +429,32 @@ function handleEditCategorySubmit(e) {
   }
 }
 
+function openAddCategoryModal() {
+  addCatForm.reset();
+  addCatDialog.showModal();
+}
+
+function handleAddCategorySubmit(e) {
+  e.preventDefault();
+  let name = document.getElementById('add-category-name').value.trim();
+  if (!name) return;
+
+  if (!name.endsWith('/')) {
+    name += '/';
+  }
+
+  const newKey = 'custom_' + Date.now();
+  categories[newKey] = name;
+  
+  saveState();
+  renderAll();
+  playSound('success');
+  addCatDialog.close();
+  showToast(`Created category "${name}"`);
+}
+
 function openAddModal(preSelectedCat = '') {
   addForm.reset();
-  document.getElementById('add-new-category-group').style.display = 'none';
-  document.getElementById('add-new-category-name').removeAttribute('required');
   if (preSelectedCat) {
     document.getElementById('bookmark-category').value = preSelectedCat;
   }
@@ -477,9 +469,6 @@ function openEditModal(id) {
   editBookmarkUrl.value = b.url;
   editBookmarkTitle.value = b.title;
   editBookmarkCategory.value = b.category;
-  
-  document.getElementById('edit-new-category-group').style.display = 'none';
-  document.getElementById('edit-new-category-name').removeAttribute('required');
   
   editDialog.showModal();
 }
@@ -504,20 +493,6 @@ function handleEditBookmarkSubmit(e) {
       title = hostname.replace('www.', '');
     } catch (e) {
       title = url;
-    }
-  }
-  
-  if (category === '__new__') {
-    const newNameInput = document.getElementById('edit-new-category-name');
-    let customName = newNameInput.value.trim();
-    if (customName) {
-      if (!customName.endsWith('/')) {
-        customName += '/';
-      }
-      category = 'custom_' + Date.now();
-      categories[category] = customName;
-    } else {
-      category = 'personal'; // fallback
     }
   }
   
@@ -554,20 +529,6 @@ function handleAddBookmarkSubmit(e) {
       title = hostname.replace('www.', '');
     } catch (e) {
       title = url;
-    }
-  }
-  
-  if (category === '__new__') {
-    const newNameInput = document.getElementById('add-new-category-name');
-    let customName = newNameInput.value.trim();
-    if (customName) {
-      if (!customName.endsWith('/')) {
-        customName += '/';
-      }
-      category = 'custom_' + Date.now();
-      categories[category] = customName;
-    } else {
-      category = 'personal'; // fallback
     }
   }
   

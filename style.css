@@ -81,6 +81,12 @@ body {
   gap: 16px;
 }
 
+.hero-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .pixel-title {
   font-family: 'Press Start 2P', monospace;
   font-size: 30px;

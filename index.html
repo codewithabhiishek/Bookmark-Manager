@@ -49,7 +49,8 @@
         <p class="pixel-title">Bookmarks</p>
         <p class="subtitle">a lil scrapbook for your <b>favorite corners</b> of the internet</p>
       </div>
-      <div>
+      <div class="hero-buttons">
+        <button id="btn-add-category-trigger" class="btn-retro">[+ ADD CATEGORY]</button>
         <button id="btn-add-trigger" class="btn-retro">[+ ADD LINK]</button>
       </div>
     </div>
@@ -100,14 +101,30 @@
           <option value="personal">personal/</option>
         </select>
       </div>
-      <div class="form-group" id="add-new-category-group" style="display: none;">
-        <label for="add-new-category-name">> NEW CATEGORY NAME:</label>
-        <input type="text" id="add-new-category-name" class="form-control" placeholder="e.g. Work" autocomplete="off">
-      </div>
     </div>
     <div class="dialog-footer">
       <button type="button" class="btn-retro-secondary" id="btn-cancel-add">[ CANCEL ]</button>
       <button type="submit" class="btn-retro-primary" id="btn-submit-add">[ SUBMIT ]</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Add Category Modal Dialog -->
+<dialog id="add-category-dialog">
+  <div class="dialog-header">
+    <h3>:: CREATE NEW CATEGORY ::</h3>
+    <button class="btn-retro-close" id="btn-close-add-cat" type="button" aria-label="Close dialog">[X]</button>
+  </div>
+  <form id="add-category-form" method="dialog">
+    <div class="dialog-body">
+      <div class="form-group">
+        <label for="add-category-name">> CATEGORY NAME:</label>
+        <input type="text" id="add-category-name" class="form-control" placeholder="e.g. Work" required autocomplete="off">
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn-retro-secondary" id="btn-cancel-add-cat">[ CANCEL ]</button>
+      <button type="submit" class="btn-retro-primary" id="btn-submit-add-cat">[ CREATE ]</button>
     </div>
   </form>
 </dialog>
@@ -134,10 +151,6 @@
         <select id="edit-bookmark-category" class="form-control" required>
           <!-- Synced dynamically by app.js -->
         </select>
-      </div>
-      <div class="form-group" id="edit-new-category-group" style="display: none;">
-        <label for="edit-new-category-name">> NEW CATEGORY NAME:</label>
-        <input type="text" id="edit-new-category-name" class="form-control" placeholder="e.g. Work" autocomplete="off">
       </div>
     </div>
     <div class="dialog-footer">
