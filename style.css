@@ -361,15 +361,15 @@ body {
 .chip-actions {
   display: none;
   position: absolute;
-  top: -28px;
+  top: -32px;
   left: 50%;
   transform: translateX(-50%);
   background: #0d100d;
   border: 1px solid var(--green);
   border-radius: 6px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   z-index: 10;
-  gap: 6px;
+  gap: 8px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.5);
   align-items: center;
 }
@@ -381,7 +381,7 @@ body {
   top: 100%;
   left: 0;
   width: 100%;
-  height: 12px;
+  height: 14px;
   background: transparent;
 }
 
@@ -394,9 +394,9 @@ body {
   border: none;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px 6px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -533,6 +533,7 @@ body {
   color: var(--bg);
   box-shadow: 2px 2px 0 var(--green);
 }
+
 
 /* Modals & Dialogs (Hacker Terminal style) */
 dialog {
@@ -827,30 +828,3 @@ dialog#search-dialog {
     grid-template-columns: 1fr;
   }
 }
-
-/* Bookmarklet button styling */
-.bookmarklet-container {
-  margin-top: 16px;
-  line-height: 1.8;
-}
-.bookmarklet-btn {
-  color: var(--pink);
-  text-decoration: none;
-  font-weight: bold;
-  border: 1px dashed var(--pink);
-  padding: 3px 8px;
-  background: rgba(255, 0, 128, 0.05);
-  cursor: grab;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  display: inline-block;
-  margin-left: 6px;
-  transition: all 0.2s ease;
-}
-.bookmarklet-btn:hover {
-  background: var(--pink);
-  color: var(--bg);
-  box-shadow: 0 0 8px var(--pink);
-  text-shadow: none;
-}
-

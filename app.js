@@ -110,14 +110,6 @@ const btnAddCategoryTrigger = document.getElementById('btn-add-category-trigger'
 function init() {
   renderAll();
   rotateMarqueeLogs();
-  
-  // Dynamically update the bookmarklet URL target to current host/port
-  const bookmarkletLink = document.getElementById('bookmarklet-link');
-  if (bookmarkletLink) {
-    const origin = window.location.origin;
-    bookmarkletLink.href = `javascript:window.location.href='${origin}/?add=true&url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title)`;
-  }
-  
   // Modal toggle listeners
   btnAddTrigger.addEventListener('click', () => { playSound('click'); openAddModal(); });
   btnCloseAdd.addEventListener('click', () => { playSound('click'); addDialog.close(); });
@@ -304,7 +296,7 @@ function renderCategoryCards() {
     const chipListContainer = card.querySelector(`#chip-list-${catKey}`);
     
     if (catBookmarks.length === 0) {
-      chipListContainer.innerHTML = `<div style="font-size: 9px; color: var(--muted); padding: 4px 0;">[empty folder]</div>`;
+      chipListContainer.innerHTML = `<div style="font-size: 9px; color: var(--muted); padding: 4px 0; line-height: 1.4;">no bookmarks yet_<br>press [+] to add one</div>`;
     } else {
       catBookmarks.forEach(bookmark => {
         const chipWrap = document.createElement('div');
