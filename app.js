@@ -43,31 +43,6 @@ const categoryColors = {
   fun: '#c084fc'
 };
 
-// Robust favicon fallback chain
-window.handleFaviconError = function(img, host) {
-  let step = parseInt(img.getAttribute('data-fallback-step') || '0');
-  
-  const fallbacks = [
-    `https://${host}/favicon.ico`,
-    `https://${host}/favicon.png`,
-    `https://${host}/favicon.svg`,
-    `https://icons.duckduckgo.com/ip3/${host}.ico`
-  ];
-  
-  if (step < fallbacks.length) {
-    img.setAttribute('data-fallback-step', step + 1);
-    img.src = fallbacks[step];
-  } else {
-    // Hide the image
-    img.style.display = 'none';
-    // If inside a pinned sticker, show the fallback ASCII glyph
-    const fallbackSpan = img.nextElementSibling;
-    if (fallbackSpan && fallbackSpan.classList.contains('domain-icon-fallback')) {
-      fallbackSpan.style.display = 'block';
-    }
-  }
-};
-
 // Application State
 let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v4')) || defaultBookmarks;
 let categories = JSON.parse(localStorage.getItem('zenmark_categories_v4')) || defaultCategories;
