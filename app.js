@@ -202,7 +202,7 @@ function renderPinnedStickers() {
       host = new URL(bookmark.url).hostname;
     } catch (e) {}
     
-    const iconUrl = host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '';
+    const iconUrl = host ? `https://${host}/favicon.ico` : '';
     
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
@@ -264,7 +264,7 @@ function renderCategoryCards() {
         try {
           host = new URL(bookmark.url).hostname;
         } catch (e) {}
-        const iconUrl = host ? `https://www.google.com/s2/favicons?sz=32&domain=${host}` : '';
+        const iconUrl = host ? `https://${host}/favicon.ico` : '';
         
         chipWrap.innerHTML = `
           <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${bookmark.url}">
