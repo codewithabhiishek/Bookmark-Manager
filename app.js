@@ -949,6 +949,10 @@ function getGlyphForDomain(url) {
     if (host.includes('my-portfolio') || host.includes('myportfolio')) return '💻';
     if (host.includes('skillsdirectory')) return '⌘';
     if (host.includes('free-for')) return '🆓';
+    if (host.includes('study-os') || host.includes('studyos')) return '📚';
+    if (host.includes('book-vault') || host.includes('bookvault')) return '📖';
+    if (host.includes('fitarena')) return '💪';
+    if (host.includes('bookmarks') || host.includes('bookmark')) return '🔖';
     return '★';
   } catch (e) {
     return '★';
