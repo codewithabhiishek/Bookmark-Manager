@@ -901,18 +901,6 @@ function handleGlobalKeydown(e) {
     return; // Skip hotkeys when editing text inputs
   }
 
-  // 1-10 number hotkeys for top pinned bookmarks (1-9 and 0)
-  if ((e.key >= '1' && e.key <= '9') || e.key === '0') {
-    const pinnedList = bookmarks.filter(b => b.pinned);
-    const index = e.key === '0' ? 9 : parseInt(e.key) - 1;
-    if (pinnedList[index]) {
-      e.preventDefault();
-      playSound('click');
-      window.open(pinnedList[index].url, '_blank');
-      showToast(`Opening ${pinnedList[index].title}...`);
-    }
-  }
-
   if (e.key === '/') {
     e.preventDefault();
     openSearchModal();
