@@ -66,6 +66,7 @@ categories = { ...defaultCategories, ...categories };
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 let isSyncedFromCloud = false;
+let editModeActive = false;
 
 // DOM Elements
 const addDialog = document.getElementById('add-bookmark-dialog');
@@ -98,6 +99,7 @@ const addCatForm = document.getElementById('add-category-form');
 const btnCloseAddCat = document.getElementById('btn-close-add-cat');
 const btnCancelAddCat = document.getElementById('btn-cancel-add-cat');
 const btnAddCategoryTrigger = document.getElementById('btn-add-category-trigger');
+const btnEditModeToggle = document.getElementById('btn-edit-mode-toggle');
 
 // Event Listeners Initialization
 // Event Listeners Initialization
@@ -107,6 +109,23 @@ function init() {
   
   // Sync bookmarks and categories with Upstash Redis
   syncFromCloud();
+
+  // Edit Mode toggle listener
+  btnEditModeToggle.addEventListener('click', () => {
+    playSound('click');
+    editModeActive = !editModeActive;
+    if (editModeActive) {
+      document.body.classList.add('edit-mode-active');
+      btnEditModeToggle.textContent = '[✎ EDIT MODE: ON]';
+      btnEditModeToggle.classList.add('active');
+      showToast('Edit Mode Enabled. Tap links to edit/reorder.');
+    } else {
+      document.body.classList.remove('edit-mode-active');
+      btnEditModeToggle.textContent = '[✎ EDIT MODE: OFF]';
+      btnEditModeToggle.classList.remove('active');
+      showToast('Edit Mode Disabled.');
+    }
+  });
 
   // Modal toggle listeners
   btnAddTrigger.addEventListener('click', () => { playSound('click'); openAddModal(); });
@@ -338,6 +357,14 @@ function renderCategoryCards() {
         chipWrap.querySelector('.btn-delete-chip').addEventListener('click', (e) => {
           e.preventDefault();
           deleteBookmark(bookmark.id);
+        });
+
+        // Bind click handler to the link itself to override navigation in edit mode
+        chipWrap.querySelector('.chip').addEventListener('click', (e) => {
+          if (editModeActive) {
+            e.preventDefault();
+            openEditModal(bookmark.id);
+          }
         });
 
         // Drag-and-drop source event listeners
