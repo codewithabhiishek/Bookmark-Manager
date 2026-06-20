@@ -267,9 +267,6 @@ function renderCategoryCards() {
     const catBookmarks = bookmarks.filter(b => b.category === catKey);
     const cardColor = getCategoryColor(catKey);
     
-    // Sort bookmarks alphabetically
-    catBookmarks.sort((a, b) => a.title.localeCompare(b.title));
-    
     const card = document.createElement('div');
     card.className = 'card';
     card.style.setProperty('--card-color', cardColor);
@@ -357,6 +354,73 @@ function renderCategoryCards() {
             c.classList.remove('drag-over');
             c.classList.remove('card-drag-over');
           });
+          document.querySelectorAll('.chip-wrapper').forEach(cw => {
+            cw.classList.remove('drag-over');
+          });
+        });
+
+        // Drag-and-drop destination event listeners for Chip
+        chipWrap.addEventListener('dragenter', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const types = e.dataTransfer ? e.dataTransfer.types : null;
+          const isCard = types && Array.from(types).includes('text/category-key');
+          if (!isCard) {
+            chipWrap.classList.add('drag-over');
+          }
+        });
+        
+        chipWrap.addEventListener('dragleave', (e) => {
+          e.stopPropagation();
+          chipWrap.classList.remove('drag-over');
+        });
+        
+        chipWrap.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        
+        chipWrap.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          chipWrap.classList.remove('drag-over');
+          
+          const types = e.dataTransfer ? e.dataTransfer.types : null;
+          const isCard = types && Array.from(types).includes('text/category-key');
+          if (!isCard) {
+            const draggedBookmarkId = e.dataTransfer.getData('text/plain');
+            const targetBookmarkId = bookmark.id;
+            
+            if (draggedBookmarkId && targetBookmarkId && draggedBookmarkId !== targetBookmarkId) {
+              const draggedIdx = bookmarks.findIndex(x => x.id === draggedBookmarkId);
+              const targetIdx = bookmarks.findIndex(x => x.id === targetBookmarkId);
+              
+              if (draggedIdx !== -1 && targetIdx !== -1) {
+                const draggedBookmark = bookmarks[draggedIdx];
+                const oldCat = draggedBookmark.category;
+                const newCat = bookmark.category;
+                draggedBookmark.category = newCat;
+                
+                // Remove from old index and insert at target index
+                bookmarks.splice(draggedIdx, 1);
+                
+                const newTargetIdx = bookmarks.findIndex(x => x.id === targetBookmarkId);
+                bookmarks.splice(newTargetIdx, 0, draggedBookmark);
+                
+                saveState();
+                renderAll();
+                playSound('success');
+                
+                const oldCatName = categories[oldCat] || oldCat;
+                const newCatName = categories[newCat] || newCat;
+                if (oldCat !== newCat) {
+                  showToast(`Moved "${draggedBookmark.title}" to "${newCatName}"`);
+                } else {
+                  showToast(`Reordered "${draggedBookmark.title}"`);
+                }
+              }
+            }
+          }
         });
         
         chipListContainer.appendChild(chipWrap);
@@ -467,14 +531,26 @@ function renderCategoryCards() {
       } else {
         const draggedBookmarkId = e.dataTransfer.getData('text/plain');
         const targetCat = card.getAttribute('data-cat');
-        const b = bookmarks.find(x => x.id === draggedBookmarkId);
-        if (b && b.category !== targetCat) {
-          const newCatName = categories[targetCat] || targetCat;
+        const draggedIdx = bookmarks.findIndex(x => x.id === draggedBookmarkId);
+        if (draggedIdx !== -1) {
+          const b = bookmarks[draggedIdx];
+          const oldCat = b.category;
+          
+          // Remove from old position and push to the end of the array
+          bookmarks.splice(draggedIdx, 1);
           b.category = targetCat;
+          bookmarks.push(b);
+          
           saveState();
           renderAll();
           playSound('success');
-          showToast(`Moved "${b.title}" to "${newCatName}"`);
+          
+          if (oldCat !== targetCat) {
+            const newCatName = categories[targetCat] || targetCat;
+            showToast(`Moved "${b.title}" to "${newCatName}"`);
+          } else {
+            showToast(`Moved "${b.title}" to end`);
+          }
         }
       }
     });

@@ -866,6 +866,19 @@ dialog#search-dialog {
   outline-offset: 4px;
 }
 
+.chip-wrapper.drag-over::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--green);
+  animation: cursor-blink 0.8s step-start infinite;
+  z-index: 10;
+}
+
+
 /* Responsive query grids */
 @media (max-width: 600px) {
   .hero-flex {
