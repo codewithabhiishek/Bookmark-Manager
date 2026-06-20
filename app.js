@@ -649,6 +649,13 @@ function openEditModal(id) {
   editDialog.showModal();
 }
 
+function formatBookmarkTitle(title) {
+  if (!title) return '';
+  return title.trim().replace(/\b\w+\b/g, (word) => {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+}
+
 function handleEditBookmarkSubmit(e) {
   e.preventDefault();
   const id = editBookmarkId.value;
@@ -671,6 +678,8 @@ function handleEditBookmarkSubmit(e) {
       title = url;
     }
   }
+  
+  title = formatBookmarkTitle(title);
   
   const b = bookmarks.find(x => x.id === id);
   if (b) {
@@ -707,6 +716,8 @@ function handleAddBookmarkSubmit(e) {
       title = url;
     }
   }
+  
+  title = formatBookmarkTitle(title);
   
   const newBookmark = {
     id: Date.now().toString(),
