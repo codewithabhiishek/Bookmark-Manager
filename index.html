@@ -13,9 +13,9 @@
     window.handleFaviconError = function(img, host) {
       let step = parseInt(img.getAttribute('data-fallback-step') || '0');
       const fallbacks = [
+        `https://${host}/favicon.ico`,
         `https://${host}/favicon.png`,
         `https://${host}/favicon.svg`,
-        `https://www.google.com/s2/favicons?sz=64&domain=${host}`,
         `https://icons.duckduckgo.com/ip3/${host}.ico`
       ];
       
