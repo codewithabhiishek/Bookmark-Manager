@@ -1,18 +1,31 @@
-export default async function handler(req, res) {
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(req) {
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
 
   if (!url || !token) {
-    return res.status(500).json({ error: "Missing database environment variables." });
+    return new Response(
+      JSON.stringify({ error: "Missing database environment variables." }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  };
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return new Response(null, { status: 200, headers });
   }
 
   if (req.method === 'GET') {
@@ -27,15 +40,18 @@ export default async function handler(req, res) {
       });
       const data = await response.json();
       const payload = data.result ? JSON.parse(data.result) : null;
-      return res.status(200).json(payload);
+      return new Response(JSON.stringify(payload), { status: 200, headers });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers }
+      );
     }
   }
 
   if (req.method === 'POST') {
     try {
-      const payload = req.body;
+      const payload = await req.json();
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -45,11 +61,20 @@ export default async function handler(req, res) {
         body: JSON.stringify(["SET", "bookmarks_dashboard_data", JSON.stringify(payload)])
       });
       const data = await response.json();
-      return res.status(200).json({ success: true, data });
+      return new Response(
+        JSON.stringify({ success: true, data }),
+        { status: 200, headers }
+      );
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers }
+      );
     }
   }
 
-  return res.status(405).json({ error: 'Method not allowed' });
+  return new Response(
+    JSON.stringify({ error: 'Method not allowed' }),
+    { status: 405, headers }
+  );
 }
