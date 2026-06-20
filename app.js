@@ -35,35 +35,28 @@ const defaultCategories = {
   vibe: 'Vibe-Coding/'
 };
 
-const categoryColors = {
-  dev: 'var(--green)',
-  design: 'var(--pink)',
-  learning: 'var(--amber)',
-  freelance: 'var(--cyan)',
-  personal: '#aaa',
-  fun: '#c084fc',
-  vibe: 'var(--pink)'
-};
-
 const retroColorPool = [
-  'var(--green)',
-  'var(--pink)',
-  'var(--amber)',
-  'var(--cyan)',
-  '#c084fc',
-  '#f97316',
-  '#f43f5e',
-  '#06b6d4'
+  'var(--green)', // #39ff14 Neon Green
+  'var(--pink)',  // #ff0080 Neon Pink
+  'var(--amber)', // #ffb000 Neon Amber
+  'var(--cyan)',  // #23d5e0 Neon Cyan
+  '#c084fc',      // Neon Purple
+  '#f97316',      // Neon Orange
+  '#94a3b8',      // Retro Silver/Slate
+  '#3b82f6',      // Classic Tech Blue
+  '#f43f5e',      // Cyberpunk Rose Red
+  '#84cc16',      // Neon Lime
+  '#0d9488',      // Cyberpunk Teal
+  '#d946ef'       // Vivid Magenta
 ];
 
 function getCategoryColor(catKey) {
-  if (categoryColors[catKey]) return categoryColors[catKey];
-  let hash = 0;
-  for (let i = 0; i < catKey.length; i++) {
-    hash = catKey.charCodeAt(i) + ((hash << 5) - hash);
+  const keys = Object.keys(categories);
+  const index = keys.indexOf(catKey);
+  if (index !== -1) {
+    return retroColorPool[index % retroColorPool.length];
   }
-  const index = Math.abs(hash) % retroColorPool.length;
-  return retroColorPool[index];
+  return 'var(--green)';
 }
 
 // Application State
@@ -72,6 +65,7 @@ let categories = JSON.parse(localStorage.getItem('zenmark_categories_v4')) || de
 categories = { ...defaultCategories, ...categories };
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
+let isSyncedFromCloud = false;
 
 // DOM Elements
 const addDialog = document.getElementById('add-bookmark-dialog');
@@ -305,6 +299,7 @@ function renderCategoryCards() {
       catBookmarks.forEach(bookmark => {
         const chipWrap = document.createElement('div');
         chipWrap.className = 'chip-wrapper';
+        chipWrap.setAttribute('draggable', 'true');
         
         let host = '';
         try {
@@ -312,9 +307,13 @@ function renderCategoryCards() {
         } catch (e) {}
         const iconUrl = host ? `https://${host}/favicon.ico` : '';
         
+        const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
           <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${bookmark.url}">
-            ${iconUrl ? `<img class="chip-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}')">` : ''}
+            ${iconUrl ? `
+              <img class="chip-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}')">
+              <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
+            ` : `<span style="font-size:10px;">${glyph}</span>`}
             <span>${bookmark.title}</span>
           </a>
           <div class="chip-actions">
@@ -343,6 +342,22 @@ function renderCategoryCards() {
           e.preventDefault();
           deleteBookmark(bookmark.id);
         });
+
+        // Drag-and-drop source event listeners
+        chipWrap.addEventListener('dragstart', (e) => {
+          e.stopPropagation(); // Prevent drag events bubbling to card
+          chipWrap.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', bookmark.id);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        chipWrap.addEventListener('dragend', () => {
+          chipWrap.classList.remove('dragging');
+          document.querySelectorAll('.card').forEach(c => {
+            c.classList.remove('drag-over');
+            c.classList.remove('card-drag-over');
+          });
+        });
         
         chipListContainer.appendChild(chipWrap);
       });
@@ -361,6 +376,107 @@ function renderCategoryCards() {
     // Bind Card Delete [✖]
     card.querySelector('.btn-card-delete').addEventListener('click', (e) => {
       deleteCategory(catKey);
+    });
+
+    // Make Card draggable via Tape handle
+    const tape = card.querySelector('.tape');
+    tape.addEventListener('mousedown', () => {
+      card.setAttribute('draggable', 'true');
+    });
+    
+    tape.addEventListener('mouseup', () => {
+      card.removeAttribute('draggable');
+    });
+
+    card.addEventListener('dragstart', (e) => {
+      card.classList.add('card-dragging');
+      e.dataTransfer.setData('text/category-key', catKey);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('card-dragging');
+      card.removeAttribute('draggable');
+      document.querySelectorAll('.card').forEach(c => {
+        c.classList.remove('drag-over');
+        c.classList.remove('card-drag-over');
+      });
+    });
+
+    // Drag-and-drop target event listeners for Card
+    let dragCounter = 0;
+    
+    card.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dragCounter++;
+      const types = e.dataTransfer ? e.dataTransfer.types : null;
+      const isCard = types && Array.from(types).includes('text/category-key');
+      if (isCard) {
+        card.classList.add('card-drag-over');
+      } else {
+        card.classList.add('drag-over');
+      }
+    });
+    
+    card.addEventListener('dragleave', () => {
+      dragCounter--;
+      if (dragCounter === 0) {
+        card.classList.remove('drag-over');
+        card.classList.remove('card-drag-over');
+      }
+    });
+    
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      card.classList.remove('drag-over');
+      card.classList.remove('card-drag-over');
+      
+      const types = e.dataTransfer ? e.dataTransfer.types : null;
+      const isCard = types && Array.from(types).includes('text/category-key');
+      if (isCard) {
+        const draggedKey = e.dataTransfer.getData('text/category-key');
+        const targetKey = card.getAttribute('data-cat');
+        if (draggedKey && targetKey && draggedKey !== targetKey) {
+          const keys = Object.keys(categories);
+          const draggedIdx = keys.indexOf(draggedKey);
+          const targetIdx = keys.indexOf(targetKey);
+          if (draggedIdx !== -1 && targetIdx !== -1) {
+            // Remove dragged key and insert at target index
+            keys.splice(draggedIdx, 1);
+            keys.splice(targetIdx, 0, draggedKey);
+            
+            // Rebuild categories
+            const newCategories = {};
+            keys.forEach(k => {
+              newCategories[k] = categories[k];
+            });
+            categories = newCategories;
+            
+            saveState();
+            renderAll();
+            playSound('success');
+            showToast(`REORDERED CATEGORY "${categories[draggedKey].replace(/\/$/, '')}"`);
+          }
+        }
+      } else {
+        const draggedBookmarkId = e.dataTransfer.getData('text/plain');
+        const targetCat = card.getAttribute('data-cat');
+        const b = bookmarks.find(x => x.id === draggedBookmarkId);
+        if (b && b.category !== targetCat) {
+          const newCatName = categories[targetCat] || targetCat;
+          b.category = targetCat;
+          saveState();
+          renderAll();
+          playSound('success');
+          showToast(`Moved "${b.title}" to "${newCatName}"`);
+        }
+      }
     });
     
     categoriesBoard.appendChild(card);
@@ -389,6 +505,7 @@ function syncCategoryDropdown() {
 
 // Logic Events
 function saveState() {
+  isSyncedFromCloud = true; // Protect local modifications from being overwritten by startup load
   localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
   localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
   syncToCloud();
@@ -415,12 +532,20 @@ async function syncFromCloud() {
     const res = await fetch('/api/bookmarks');
     if (res.ok) {
       const data = await res.json();
+      
+      // If user has already made local modifications, skip overwriting
+      if (isSyncedFromCloud) {
+        console.log('[Sync] Cloud sync returned but local modifications already occurred. Skipping overwrite.');
+        return;
+      }
+      
       if (data && data.bookmarks && data.categories) {
         bookmarks = data.bookmarks;
         categories = data.categories;
         localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
         localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
         renderAll();
+        isSyncedFromCloud = true;
         console.log('[Sync] Successfully synchronized data from Vercel KV database.');
       } else {
         // Cloud is empty. Only initialize/upload if this client actually has existing local storage data.
@@ -431,6 +556,7 @@ async function syncFromCloud() {
         } else {
           console.log('[Sync] Cloud is empty, and local storage is empty. Waiting for data.');
         }
+        isSyncedFromCloud = true;
       }
     }
   } catch (err) {
