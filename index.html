@@ -14,8 +14,8 @@
       let step = parseInt(img.getAttribute('data-fallback-step') || '0');
       const cacheBust = `v=${Date.now()}`;
       const fallbacks = [
-        `https://${host}/favicon.ico?${cacheBust}`,
         `https://${host}/favicon.png?${cacheBust}`,
+        `https://${host}/favicon.ico?${cacheBust}`,
         `https://${host}/favicon.svg?${cacheBust}`
       ];
       
