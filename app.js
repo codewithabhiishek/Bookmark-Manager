@@ -126,7 +126,7 @@ function init() {
   window.addEventListener('keydown', handleGlobalKeydown);
   
   // Search Modal Navigation Keys
-  searchDialog.addEventListener('keydown', handleSearchNavigation);
+  searchInput.addEventListener('keydown', handleSearchNavigation);
 
   // Add Category Modal toggle listeners
   btnAddCategoryTrigger.addEventListener('click', () => { playSound('click'); openAddCategoryModal(); });
