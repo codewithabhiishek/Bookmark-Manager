@@ -11,13 +11,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>
-    window.handleFaviconError = function(img, host) {
+    window.handleFaviconError = function(img, host, origin) {
       let step = parseInt(img.getAttribute('data-fallback-step') || '0');
       const cacheBust = `v=${Date.now()}`;
+      const resolvedOrigin = origin || `https://${host}`;
       const fallbacks = [
-        `https://www.google.com/s2/favicons?sz=64&domain=https://${host}`,
-        `https://${host}/favicon.png?${cacheBust}`,
-        `https://${host}/favicon.svg?${cacheBust}`
+        `https://www.google.com/s2/favicons?sz=64&domain=${host}`,
+        `${resolvedOrigin}/favicon.png?${cacheBust}`,
+        `${resolvedOrigin}/favicon.svg?${cacheBust}`
       ];
       
       if (step < fallbacks.length) {

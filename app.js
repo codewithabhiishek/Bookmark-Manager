@@ -234,17 +234,20 @@ function renderPinnedStickers() {
     sticker.title = `${bookmark.title} (${bookmark.url})`;
     
     let host = '';
+    let origin = '';
     try {
-      host = new URL(bookmark.url).hostname;
+      const parsed = new URL(bookmark.url);
+      host = parsed.hostname;
+      origin = parsed.origin;
     } catch (e) {}
     
-    const iconUrl = host ? `https://${host}/favicon.ico` : '';
+    const iconUrl = origin ? `${origin}/favicon.ico` : '';
     
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
       <div class="glyph">
         ${iconUrl ? `
-          <img class="domain-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}')">
+          <img class="domain-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
         ` : `<span>${glyph}</span>`}
       </div>
@@ -299,16 +302,19 @@ function renderCategoryCards() {
         chipWrap.setAttribute('draggable', 'true');
         
         let host = '';
+        let origin = '';
         try {
-          host = new URL(bookmark.url).hostname;
+          const parsed = new URL(bookmark.url);
+          host = parsed.hostname;
+          origin = parsed.origin;
         } catch (e) {}
-        const iconUrl = host ? `https://${host}/favicon.ico` : '';
+        const iconUrl = origin ? `${origin}/favicon.ico` : '';
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
           <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${bookmark.url}">
             ${iconUrl ? `
-              <img class="chip-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}')">
+              <img class="chip-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
             ` : `<span style="font-size:10px;">${glyph}</span>`}
             <span>${bookmark.title}</span>
@@ -740,9 +746,13 @@ function handleEditBookmarkSubmit(e) {
   
   if (!url) return;
   
-  // Prepend https:// if protocol is missing
+  // Prepend protocol if missing
   if (!/^https?:\/\//i.test(url)) {
-    url = 'https://' + url;
+    if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
+      url = 'http://' + url;
+    } else {
+      url = 'https://' + url;
+    }
   }
   
   if (!title) {
@@ -778,9 +788,13 @@ function handleAddBookmarkSubmit(e) {
   
   if (!url) return;
   
-  // Prepend https:// if protocol is missing
+  // Prepend protocol if missing
   if (!/^https?:\/\//i.test(url)) {
-    url = 'https://' + url;
+    if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
+      url = 'http://' + url;
+    } else {
+      url = 'https://' + url;
+    }
   }
   
   if (!title) {
