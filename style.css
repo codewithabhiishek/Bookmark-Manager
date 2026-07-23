@@ -352,16 +352,18 @@ body {
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  display: inline-flex;
+  display: none; /* shown via JS when all favicon sources fail */
   align-items: center;
   justify-content: center;
-  background: rgba(57, 255, 20, 0.15);
-  border: 1px solid var(--green);
+  background: rgba(57, 255, 20, 0.12);
+  border: 1px solid rgba(57, 255, 20, 0.4);
   color: var(--green);
+  font-size: 8px;
   font-family: var(--font-mono);
   font-weight: 700;
-  line-height: 1;
   flex-shrink: 0;
+  overflow: hidden;
+  line-height: 1;
 }
 
 .chip:hover {
