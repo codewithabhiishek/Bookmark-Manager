@@ -16,7 +16,6 @@
       const cacheBust = `v=${Date.now()}`;
       const resolvedOrigin = origin || `https://${host}`;
       const fallbacks = [
-        `https://www.google.com/s2/favicons?sz=64&domain=${host}`,
         `https://icons.duckduckgo.com/ip3/${host}.ico`,
         `${resolvedOrigin}/favicon.ico?${cacheBust}`,
         `${resolvedOrigin}/favicon.png?${cacheBust}`,
@@ -24,15 +23,13 @@
       ];
       
       if (step < fallbacks.length) {
-        console.log(`[Favicon Fallback] Load failed for ${host}. Trying step ${step + 1}/${fallbacks.length}: ${fallbacks[step]}`);
         img.setAttribute('data-fallback-step', step + 1);
         img.src = fallbacks[step];
       } else {
-        console.warn(`[Favicon Fallback] All fallbacks failed for ${host}. Hiding icon.`);
         img.style.display = 'none';
         const fallbackSpan = img.nextElementSibling;
         if (fallbackSpan && fallbackSpan.classList.contains('domain-icon-fallback')) {
-          fallbackSpan.style.display = 'block';
+          fallbackSpan.style.display = 'inline-flex';
         }
       }
     };
