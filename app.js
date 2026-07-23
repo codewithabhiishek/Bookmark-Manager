@@ -241,12 +241,7 @@ function renderPinnedStickers() {
       origin = parsed.origin;
     } catch (e) {}
     
-    // Force custom retro badges for projects that only have the generic Next.js globe
-    const forceBadgeDomains = [
-      'traffic-hub', 'cursor-100kg', 'zen-sudoku', 'ice-and-water', 'windows-xp'
-    ];
-    const forceBadge = host && forceBadgeDomains.some(d => host.includes(d));
-    const iconUrl = (!forceBadge && origin) ? `${origin}/favicon.ico` : '';
+    const iconUrl = origin ? `${origin}/favicon.ico` : '';
     
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
@@ -254,7 +249,7 @@ function renderPinnedStickers() {
         ${iconUrl ? `
           <img class="domain-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
-        ` : `<span class="domain-icon-fallback" style="display:inline-flex;">${glyph}</span>`}
+        ` : `<span>${glyph}</span>`}
       </div>
       <div class="name">${bookmark.title}</div>
     `;
@@ -313,13 +308,7 @@ function renderCategoryCards() {
           host = parsed.hostname;
           origin = parsed.origin;
         } catch (e) {}
-        
-        // Force custom retro badges for projects that only have the generic Next.js globe
-        const forceBadgeDomains = [
-          'traffic-hub', 'cursor-100kg', 'zen-sudoku', 'ice-and-water', 'windows-xp'
-        ];
-        const forceBadge = host && forceBadgeDomains.some(d => host.includes(d));
-        const iconUrl = (!forceBadge && origin) ? `${origin}/favicon.ico` : '';
+        const iconUrl = origin ? `${origin}/favicon.ico` : '';
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
@@ -327,7 +316,7 @@ function renderCategoryCards() {
             ${iconUrl ? `
               <img class="chip-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
-            ` : `<span class="domain-icon-fallback" style="display:inline-flex; font-size:10px;">${glyph}</span>`}
+            ` : `<span style="font-size:10px;">${glyph}</span>`}
             <span>${bookmark.title}</span>
           </a>
           <div class="chip-actions">
