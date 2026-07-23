@@ -241,7 +241,7 @@ function renderPinnedStickers() {
       origin = parsed.origin;
     } catch (e) {}
     
-    const iconUrl = origin ? `${origin}/favicon.ico` : '';
+    const iconUrl = host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '';
     
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
@@ -308,7 +308,7 @@ function renderCategoryCards() {
           host = parsed.hostname;
           origin = parsed.origin;
         } catch (e) {}
-        const iconUrl = origin ? `${origin}/favicon.ico` : '';
+        const iconUrl = host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '';
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
@@ -1006,8 +1006,6 @@ function getGlyphForDomain(url) {
     if (host.includes('windsurf') || host.includes('codeium')) return '⌬';
     if (host.includes('figma')) return '◆';
     if (host.includes('google') || host.includes('gmail') || host.includes('mail.google')) return '✉';
-    if (host.includes('reddit')) return 'R';
-    if (host.includes('spotify')) return 'S';
     if (host.includes('udemy')) return 'U';
     if (host.includes('youtube')) return '▶';
     if (host.includes('unstop')) return '⎋';
@@ -1023,16 +1021,26 @@ function getGlyphForDomain(url) {
     if (host.includes('asoftmurmur')) return '🌊';
     if (host.includes('aurabuild')) return '⏏';
     if (host.includes('web3forms')) return '▩';
-    if (host.includes('my-portfolio') || host.includes('myportfolio')) return '💻';
-    if (host.includes('skillsdirectory')) return '⌘';
+    if (host.includes('my-portfolio') || host.includes('portfolio')) return '>_';
+    if (host.includes('study-os') || host.includes('studyos') || host.includes('mystudy')) return '>_';
+    if (host.includes('skillsdirectory') || host.includes('skills')) return '⌘';
     if (host.includes('free-for')) return '🆓';
-    if (host.includes('study-os') || host.includes('studyos')) return '📚';
-    if (host.includes('book-vault') || host.includes('bookvault')) return '📖';
-    if (host.includes('fitarena')) return '💪';
-    if (host.includes('bookmarks') || host.includes('bookmark')) return '🔖';
-    return '★';
+    if (host.includes('book-vault') || host.includes('bookvault')) return '🔒';
+    if (host.includes('fitarena')) return '⚡';
+    if (host.includes('college')) return '🎓';
+    if (host.includes('traffic')) return '🚥';
+    if (host.includes('ev-route') || host.includes('evroute')) return '⚡';
+    if (host.includes('cursor')) return '⌖';
+    if (host.includes('sudoku')) return '🧩';
+    if (host.includes('ice') || host.includes('water')) return '🧊';
+    if (host.includes('windows')) return '❖';
+    
+    // Extract first letter of domain clean name
+    const parts = host.replace(/^www\./, '').split('.');
+    const mainName = parts[0] || '';
+    return mainName ? mainName.charAt(0).toUpperCase() : '✦';
   } catch (e) {
-    return '★';
+    return '✦';
   }
 }
 

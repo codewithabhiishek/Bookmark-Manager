@@ -348,6 +348,22 @@ body {
   box-sizing: border-box;
 }
 
+.domain-icon-fallback {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(57, 255, 20, 0.15);
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .chip:hover {
   border-color: var(--green);
   background: rgba(57, 255, 20, 0.08);

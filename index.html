@@ -17,6 +17,8 @@
       const resolvedOrigin = origin || `https://${host}`;
       const fallbacks = [
         `https://www.google.com/s2/favicons?sz=64&domain=${host}`,
+        `https://icons.duckduckgo.com/ip3/${host}.ico`,
+        `${resolvedOrigin}/favicon.ico?${cacheBust}`,
         `${resolvedOrigin}/favicon.png?${cacheBust}`,
         `${resolvedOrigin}/favicon.svg?${cacheBust}`
       ];
