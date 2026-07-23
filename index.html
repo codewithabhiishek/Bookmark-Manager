@@ -12,25 +12,13 @@
   <link rel="stylesheet" href="style.css">
   <script>
     window.handleFaviconError = function(img, host, origin) {
-      let step = parseInt(img.getAttribute('data-fallback-step') || '0');
-      const cacheBust = `v=${Date.now()}`;
-      const resolvedOrigin = origin || `https://${host}`;
-      const fallbacks = [
-        `https://icons.duckduckgo.com/ip3/${host}.ico`,
-        `${resolvedOrigin}/favicon.ico?${cacheBust}`,
-        `${resolvedOrigin}/favicon.png?${cacheBust}`,
-        `${resolvedOrigin}/favicon.svg?${cacheBust}`
-      ];
-      
-      if (step < fallbacks.length) {
-        img.setAttribute('data-fallback-step', step + 1);
-        img.src = fallbacks[step];
-      } else {
-        img.style.display = 'none';
-        const fallbackSpan = img.nextElementSibling;
-        if (fallbackSpan && fallbackSpan.classList.contains('domain-icon-fallback')) {
-          fallbackSpan.style.display = 'inline-flex';
-        }
+      // Only run once per image
+      if (img.getAttribute('data-failed')) return;
+      img.setAttribute('data-failed', '1');
+      img.style.display = 'none';
+      const fallbackSpan = img.nextElementSibling;
+      if (fallbackSpan && fallbackSpan.classList.contains('domain-icon-fallback')) {
+        fallbackSpan.style.display = 'inline-flex';
       }
     };
   </script>

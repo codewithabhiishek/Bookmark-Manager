@@ -241,7 +241,7 @@ function renderPinnedStickers() {
       origin = parsed.origin;
     } catch (e) {}
     
-    const iconUrl = host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '';
+    const iconUrl = host ? `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${host}&size=64` : '';
     
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
@@ -308,7 +308,7 @@ function renderCategoryCards() {
           host = parsed.hostname;
           origin = parsed.origin;
         } catch (e) {}
-        const iconUrl = host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '';
+        const iconUrl = host ? `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${host}&size=64` : '';
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
