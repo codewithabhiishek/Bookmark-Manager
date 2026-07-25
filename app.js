@@ -35,6 +35,53 @@ const defaultCategories = {
   vibe: 'Vibe-Coding/'
 };
 
+// ── Project Icon Registry ──────────────────────────────────────────────
+// Maps hostname fragments to local favicon files under /assets/project-icons/.
+// These are the REAL application favicons copied from each project's /public/ dir.
+// For your own projects, this ensures the actual app icon is always displayed
+// instead of a generic CDN-fetched icon or placeholder.
+const PROJECT_ICONS = {
+  'my-portfolio':    '/assets/project-icons/my-portfolio.svg',
+  'study-os':        '/assets/project-icons/study-os.ico',
+  'studyos':         '/assets/project-icons/study-os.ico',
+  'mystudy':         '/assets/project-icons/study-os.ico',
+  'book-vault':      '/assets/project-icons/book-vault.svg',
+  'bookvault':       '/assets/project-icons/book-vault.svg',
+  'fitarena':        '/assets/project-icons/fitarena.svg',
+  'fit-arena':       '/assets/project-icons/fitarena.svg',
+  'college-track':   '/assets/project-icons/college-tracker.svg',
+  'college-tracker': '/assets/project-icons/college-tracker.svg',
+  'traffic-hub':     '/assets/project-icons/traffic-hub.svg',
+  'smart-traffic':   '/assets/project-icons/traffic-hub.svg',
+  'ev-route':        '/assets/project-icons/ev-route.svg',
+  'evroute':         '/assets/project-icons/ev-route.svg',
+  'cursor-100':      '/assets/project-icons/cursor-100kg.svg',
+  'cursor-100kg':    '/assets/project-icons/cursor-100kg.svg',
+  'zen-sudoku':      '/assets/project-icons/zen-sudoku.png',
+  'windows-xp':      '/assets/project-icons/windows-xp.svg',
+  'retro-windows':   '/assets/project-icons/windows-xp.svg',
+};
+
+// Resolve the favicon URL for a bookmark.
+// 1. If the hostname matches a project in PROJECT_ICONS, use the local icon.
+// 2. If it's a localhost URL, try origin/favicon.ico directly.
+// 3. Otherwise, use the DuckDuckGo favicon API for external websites.
+// Returns { iconUrl, isProjectIcon }
+function getProjectIcon(host, origin) {
+  if (!host) return { iconUrl: '', isProjectIcon: false };
+  const hostLower = host.toLowerCase();
+  for (const [fragment, iconPath] of Object.entries(PROJECT_ICONS)) {
+    if (hostLower.includes(fragment)) {
+      return { iconUrl: iconPath, isProjectIcon: true };
+    }
+  }
+  const isLocal = hostLower.includes('localhost') || hostLower.includes('127.0.0.1') || hostLower.includes('0.0.0.0');
+  if (isLocal) {
+    return { iconUrl: origin ? `${origin}/favicon.ico` : '', isProjectIcon: false };
+  }
+  return { iconUrl: `https://icons.duckduckgo.com/ip3/${host}.ico`, isProjectIcon: false };
+}
+
 const retroColorPool = [
   'var(--green)', // #39ff14 Neon Green
   'var(--pink)',  // #ff0080 Neon Pink
@@ -241,24 +288,13 @@ function renderPinnedStickers() {
       origin = parsed.origin;
     } catch (e) {}
     
-    const forceBadgeDomains = [
-      'my-portfolio', 'study-os', 'studyos', 'mystudy', 'book-vault', 'bookvault',
-      'fitarena', 'college-track', 'college', 'traffic-hub', 'traffic',
-      'ev-route', 'evroute', 'cursor-100kg', 'cursor', 'zen-sudoku', 'sudoku',
-      'ice-and-water', 'ice', 'water', 'windows-xp', 'windows', 'animasterlib'
-    ];
-    const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('0.0.0.0');
-    const forceBadge = host && forceBadgeDomains.some(d => host.includes(d));
-    const iconUrl = forceBadge ? '' : (isLocal ? (origin ? `${origin}/favicon.ico` : '') : (host ? `https://icons.duckduckgo.com/ip3/${host}.ico` : ''));
-    if (iconUrl && (isLocal || localStorage.getItem('ZENMARK_DEBUG') === 'true')) {
-      console.log(`[Favicon Pipeline] Init: ${bookmark.title}`, { origUrl: bookmark.url, host, iconUrl, step: 'Attempt #1 (DuckDuckGo API)' });
-    }
+    const { iconUrl, isProjectIcon } = getProjectIcon(host, origin);
     
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
       <div class="glyph">
         ${iconUrl ? `
-          <img class="domain-icon" src="${iconUrl}" data-url="${bookmark.url}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
+          <img class="domain-icon" src="${iconUrl}" data-url="${bookmark.url}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
         ` : `<span class="domain-icon-fallback" style="display:inline-flex;">${glyph}</span>`}
       </div>
@@ -319,24 +355,13 @@ function renderCategoryCards() {
           host = parsed.hostname;
           origin = parsed.origin;
         } catch (e) {}
-        const forceBadgeDomains = [
-          'my-portfolio', 'study-os', 'studyos', 'mystudy', 'book-vault', 'bookvault',
-          'fitarena', 'college-track', 'college', 'traffic-hub', 'traffic',
-          'ev-route', 'evroute', 'cursor-100kg', 'cursor', 'zen-sudoku', 'sudoku',
-          'ice-and-water', 'ice', 'water', 'windows-xp', 'windows', 'animasterlib'
-        ];
-        const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('0.0.0.0');
-        const forceBadge = host && forceBadgeDomains.some(d => host.includes(d));
-        const iconUrl = forceBadge ? '' : (isLocal ? (origin ? `${origin}/favicon.ico` : '') : (host ? `https://icons.duckduckgo.com/ip3/${host}.ico` : ''));
-        if (iconUrl && (isLocal || localStorage.getItem('ZENMARK_DEBUG') === 'true')) {
-          console.log(`[Favicon Pipeline] Init: ${bookmark.title}`, { origUrl: bookmark.url, host, iconUrl, step: 'Attempt #1 (DuckDuckGo API)' });
-        }
+        const { iconUrl, isProjectIcon } = getProjectIcon(host, origin);
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
           <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${bookmark.url}">
             ${iconUrl ? `
-              <img class="chip-icon" src="${iconUrl}" data-url="${bookmark.url}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
+              <img class="chip-icon" src="${iconUrl}" data-url="${bookmark.url}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
             ` : `<span class="domain-icon-fallback" style="display:inline-flex; font-size:10px;">${glyph}</span>`}
             <span>${bookmark.title}</span>

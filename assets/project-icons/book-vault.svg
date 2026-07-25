@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Rounded dark background -->
+  <rect width="100" height="100" rx="22" fill="#0f172a"/>
+  
+  <!-- Padlock shackle (the metal loop) extending from the top of the book -->
+  <path d="M35 42V30c0-8.3 6.7-15 15-15s15 6.7 15 15v12" fill="none" stroke="#00C2CB" stroke-width="9.5" stroke-linecap="round"/>
+  
+  <!-- Lock body (styled as a closed book) -->
+  <rect x="26" y="38" width="48" height="46" rx="6" fill="#00C2CB"/>
+  
+  <!-- White paper pages visible on the side of the book lock -->
+  <rect x="66" y="42" width="6" height="38" rx="1.5" fill="#ffffff"/>
+  
+  <!-- Mini keyhole inside the book lock body -->
+  <circle cx="50" cy="58" r="6" fill="#0f172a"/>
+  <path d="M47 57h6l1.5 13h-9l1.5-13z" fill="#0f172a"/>
+</svg>
