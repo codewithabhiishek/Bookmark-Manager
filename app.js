@@ -241,16 +241,26 @@ function renderPinnedStickers() {
       origin = parsed.origin;
     } catch (e) {}
     
+    const forceBadgeDomains = [
+      'my-portfolio', 'study-os', 'studyos', 'mystudy', 'book-vault', 'bookvault',
+      'fitarena', 'college-track', 'college', 'traffic-hub', 'traffic',
+      'ev-route', 'evroute', 'cursor-100kg', 'cursor', 'zen-sudoku', 'sudoku',
+      'ice-and-water', 'ice', 'water', 'windows-xp', 'windows', 'animasterlib'
+    ];
     const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('0.0.0.0');
-    const iconUrl = isLocal ? (origin ? `${origin}/favicon.ico` : '') : (host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '');
+    const forceBadge = host && forceBadgeDomains.some(d => host.includes(d));
+    const iconUrl = forceBadge ? '' : (isLocal ? (origin ? `${origin}/favicon.ico` : '') : (host ? `https://icons.duckduckgo.com/ip3/${host}.ico` : ''));
+    if (iconUrl && (isLocal || localStorage.getItem('ZENMARK_DEBUG') === 'true')) {
+      console.log(`[Favicon Pipeline] Init: ${bookmark.title}`, { origUrl: bookmark.url, host, iconUrl, step: 'Attempt #1 (DuckDuckGo API)' });
+    }
     
     sticker.innerHTML = `
       <span class="pin-badge">★</span>
       <div class="glyph">
         ${iconUrl ? `
-          <img class="domain-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
+          <img class="domain-icon" src="${iconUrl}" data-url="${bookmark.url}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
-        ` : `<span>${glyph}</span>`}
+        ` : `<span class="domain-icon-fallback" style="display:inline-flex;">${glyph}</span>`}
       </div>
       <div class="name">${bookmark.title}</div>
     `;
@@ -309,16 +319,26 @@ function renderCategoryCards() {
           host = parsed.hostname;
           origin = parsed.origin;
         } catch (e) {}
+        const forceBadgeDomains = [
+          'my-portfolio', 'study-os', 'studyos', 'mystudy', 'book-vault', 'bookvault',
+          'fitarena', 'college-track', 'college', 'traffic-hub', 'traffic',
+          'ev-route', 'evroute', 'cursor-100kg', 'cursor', 'zen-sudoku', 'sudoku',
+          'ice-and-water', 'ice', 'water', 'windows-xp', 'windows', 'animasterlib'
+        ];
         const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('0.0.0.0');
-        const iconUrl = isLocal ? (origin ? `${origin}/favicon.ico` : '') : (host ? `https://www.google.com/s2/favicons?sz=64&domain=${host}` : '');
+        const forceBadge = host && forceBadgeDomains.some(d => host.includes(d));
+        const iconUrl = forceBadge ? '' : (isLocal ? (origin ? `${origin}/favicon.ico` : '') : (host ? `https://icons.duckduckgo.com/ip3/${host}.ico` : ''));
+        if (iconUrl && (isLocal || localStorage.getItem('ZENMARK_DEBUG') === 'true')) {
+          console.log(`[Favicon Pipeline] Init: ${bookmark.title}`, { origUrl: bookmark.url, host, iconUrl, step: 'Attempt #1 (DuckDuckGo API)' });
+        }
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
           <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${bookmark.url}">
             ${iconUrl ? `
-              <img class="chip-icon" src="${iconUrl}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
+              <img class="chip-icon" src="${iconUrl}" data-url="${bookmark.url}" alt="" onerror="window.handleFaviconError(this, '${host}', '${origin}')">
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
-            ` : `<span style="font-size:10px;">${glyph}</span>`}
+            ` : `<span class="domain-icon-fallback" style="display:inline-flex; font-size:10px;">${glyph}</span>`}
             <span>${bookmark.title}</span>
           </a>
           <div class="chip-actions">
