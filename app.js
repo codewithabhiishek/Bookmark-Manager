@@ -1201,5 +1201,35 @@ function playSound(type) {
   }
 }
 
+// Auto-reload PWA on new deployments when running in standalone or browser mode
+(function initPwaAutoUpdate() {
+  if (typeof window === 'undefined') return;
+  let initialETag = null;
+
+  const checkAppVersion = async () => {
+    try {
+      const res = await fetch(`/?_v=${Date.now()}`, { cache: 'no-store', method: 'HEAD' });
+      const etag = res.headers.get('etag') || res.headers.get('last-modified');
+      if (etag) {
+        if (initialETag && initialETag !== etag) {
+          console.log('[PWA Auto-Update] New version detected! Auto-reloading web app...');
+          window.location.reload();
+        } else {
+          initialETag = etag;
+        }
+      }
+    } catch (err) {}
+  };
+
+  checkAppVersion();
+  setInterval(() => {
+    if (!document.hidden) checkAppVersion();
+  }, 30000);
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkAppVersion();
+  });
+})();
+
 // Kickoff
 window.addEventListener('DOMContentLoaded', init);
