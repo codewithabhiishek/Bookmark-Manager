@@ -108,8 +108,16 @@ function getCategoryColor(catKey) {
 
 // Application State
 let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v4')) || defaultBookmarks;
-let categories = JSON.parse(localStorage.getItem('zenmark_categories_v4')) || defaultCategories;
-categories = { ...defaultCategories, ...categories };
+const savedCategories = JSON.parse(localStorage.getItem('zenmark_categories_v4'));
+let categories = savedCategories ? { ...savedCategories } : { ...defaultCategories };
+if (savedCategories) {
+  // Preserve saved user key order 100%; only append missing defaults at the end if any
+  Object.keys(defaultCategories).forEach(key => {
+    if (!(key in categories)) {
+      categories[key] = defaultCategories[key];
+    }
+  });
+}
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 let isSyncedFromCloud = false;
