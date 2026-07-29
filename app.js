@@ -118,16 +118,6 @@ if (savedCategories) {
     }
   });
 }
-const savedCategoryOrder = JSON.parse(localStorage.getItem('zenmark_category_order_v4'));
-let categoryOrder = Array.isArray(savedCategoryOrder) && savedCategoryOrder.length > 0
-  ? savedCategoryOrder
-  : Object.keys(categories);
-
-// Ensure categoryOrder contains all current keys in categories
-Object.keys(categories).forEach(k => {
-  if (!categoryOrder.includes(k)) categoryOrder.push(k);
-});
-categoryOrder = categoryOrder.filter(k => k in categories);
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 let isSyncedFromCloud = false;
@@ -328,13 +318,9 @@ function renderCategoryCards() {
   if (!categoriesBoard) return;
   categoriesBoard.innerHTML = '';
   
-  // Ensure categoryOrder contains all current keys in categories
-  Object.keys(categories).forEach(k => {
-    if (!categoryOrder.includes(k)) categoryOrder.push(k);
-  });
-  categoryOrder = categoryOrder.filter(k => k in categories);
-
-  categoryOrder.forEach(catKey => {
+  const categoryKeys = Object.keys(categories);
+  
+  categoryKeys.forEach(catKey => {
     const catName = categories[catKey];
     const catBookmarks = bookmarks.filter(b => b.category === catKey);
     const cardColor = getCategoryColor(catKey);
@@ -580,17 +566,19 @@ function renderCategoryCards() {
       if (isCard) {
         const draggedKey = e.dataTransfer.getData('text/category-key');
         const targetKey = card.getAttribute('data-cat');
-          const draggedIdx = categoryOrder.indexOf(draggedKey);
-          const targetIdx = categoryOrder.indexOf(targetKey);
+        if (draggedKey && targetKey && draggedKey !== targetKey) {
+          const keys = Object.keys(categories);
+          const draggedIdx = keys.indexOf(draggedKey);
+          const targetIdx = keys.indexOf(targetKey);
           if (draggedIdx !== -1 && targetIdx !== -1) {
             // Remove dragged key and insert at target index
-            categoryOrder.splice(draggedIdx, 1);
-            categoryOrder.splice(targetIdx, 0, draggedKey);
+            keys.splice(draggedIdx, 1);
+            keys.splice(targetIdx, 0, draggedKey);
             
             // Rebuild categories
             const newCategories = {};
-            categoryOrder.forEach(k => {
-              if (categories[k]) newCategories[k] = categories[k];
+            keys.forEach(k => {
+              newCategories[k] = categories[k];
             });
             categories = newCategories;
             
@@ -656,13 +644,12 @@ function saveState() {
   isSyncedFromCloud = true; // Protect local modifications from being overwritten by startup load
   localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
   localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
-  localStorage.setItem('zenmark_category_order_v4', JSON.stringify(categoryOrder));
   syncToCloud();
 }
 
 async function syncToCloud() {
   try {
-    const payload = { bookmarks, categories, categoryOrder };
+    const payload = { bookmarks, categories };
     const res = await fetch('/api/bookmarks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -691,27 +678,8 @@ async function syncFromCloud() {
       if (data && data.bookmarks && data.categories) {
         bookmarks = data.bookmarks;
         categories = data.categories;
-        if (Array.isArray(data.categoryOrder) && data.categoryOrder.length > 0) {
-          categoryOrder = data.categoryOrder;
-        } else {
-          categoryOrder = Object.keys(categories);
-        }
-        // Ensure categoryOrder includes all current keys
-        Object.keys(categories).forEach(k => {
-          if (!categoryOrder.includes(k)) categoryOrder.push(k);
-        });
-        categoryOrder = categoryOrder.filter(k => k in categories);
-
-        // Rebuild categories according to categoryOrder
-        const orderedCats = {};
-        categoryOrder.forEach(k => {
-          if (categories[k]) orderedCats[k] = categories[k];
-        });
-        categories = orderedCats;
-
         localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
         localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
-        localStorage.setItem('zenmark_category_order_v4', JSON.stringify(categoryOrder));
         renderAll();
         isSyncedFromCloud = true;
         console.log('[Sync] Successfully synchronized data from Vercel KV database.');
