@@ -108,6 +108,12 @@ function getCategoryColor(catKey) {
 
 // Application State
 let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v4')) || defaultBookmarks;
+bookmarks.forEach((b, index) => {
+  if (typeof b.sortIndex !== 'number') {
+    b.sortIndex = index;
+  }
+});
+bookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
 const savedCategories = JSON.parse(localStorage.getItem('zenmark_categories_v4'));
 let categories = savedCategories ? { ...savedCategories } : { ...defaultCategories };
 if (savedCategories) {
@@ -271,7 +277,7 @@ function renderPinnedStickers() {
   if (!pinStrip) return;
   pinStrip.innerHTML = '';
   
-  const pinnedList = bookmarks.filter(b => b.pinned);
+  const pinnedList = bookmarks.filter(b => b.pinned).sort((a, b) => a.sortIndex - b.sortIndex);
   
   if (pinnedList.length === 0) {
     pinStrip.innerHTML = `<div style="font-size: 10px; color: var(--muted); padding: 8px;">* No links pinned to top. Star a link chip to pin!</div>`;
@@ -322,7 +328,7 @@ function renderCategoryCards() {
   
   categoryKeys.forEach(catKey => {
     const catName = categories[catKey];
-    const catBookmarks = bookmarks.filter(b => b.category === catKey);
+    const catBookmarks = bookmarks.filter(b => b.category === catKey).sort((a, b) => a.sortIndex - b.sortIndex);
     const cardColor = getCategoryColor(catKey);
     
     const card = document.createElement('div');
@@ -642,6 +648,12 @@ function syncCategoryDropdown() {
 // Logic Events
 function saveState() {
   isSyncedFromCloud = true; // Protect local modifications from being overwritten by startup load
+  
+  // Ensure explicit ordering field is updated before saving
+  bookmarks.forEach((b, index) => {
+    b.sortIndex = index;
+  });
+  
   localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
   localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
   syncToCloud();
@@ -678,6 +690,14 @@ async function syncFromCloud() {
       if (data && data.bookmarks && data.categories) {
         bookmarks = data.bookmarks;
         categories = data.categories;
+        
+        bookmarks.forEach((b, index) => {
+          if (typeof b.sortIndex !== 'number') {
+            b.sortIndex = index;
+          }
+        });
+        bookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
+        
         localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
         localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
         renderAll();
@@ -868,7 +888,8 @@ function handleAddBookmarkSubmit(e) {
     title,
     url,
     category,
-    pinned: false
+    pinned: false,
+    sortIndex: bookmarks.length
   };
   
   bookmarks.push(newBookmark);
@@ -963,7 +984,7 @@ function handleSearchInput() {
   filteredSearchResults = bookmarks.filter(b => 
     b.title.toLowerCase().includes(query) || 
     b.url.toLowerCase().includes(query)
-  );
+  ).sort((a, b) => a.sortIndex - b.sortIndex);
   
   if (filteredSearchResults.length === 0) {
     searchResultsContainer.innerHTML = `<div class="search-no-results">> NO MATCHES FOUND</div>`;
