@@ -98,12 +98,26 @@ const retroColorPool = [
 ];
 
 function getCategoryColor(catKey) {
-  const keys = Object.keys(categories);
-  const index = keys.indexOf(catKey);
-  if (index !== -1) {
-    return retroColorPool[index % retroColorPool.length];
+  let hash = 0;
+  for (let i = 0; i < catKey.length; i++) {
+    hash = catKey.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return 'var(--green)';
+  const index = Math.abs(hash) % retroColorPool.length;
+  return retroColorPool[index];
+}
+
+// XSS Sanitizer Utility
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
 }
 
 // Application State
@@ -127,6 +141,8 @@ if (savedCategories) {
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 let isSyncedFromCloud = false;
+let isInitialCloudFetchPending = true;
+const isFreshDevice = localStorage.getItem('zenmark_bookmarks_v4') === null;
 
 // DOM Elements
 const addDialog = document.getElementById('add-bookmark-dialog');
@@ -308,11 +324,11 @@ function renderPinnedStickers() {
       <span class="pin-badge">★</span>
       <div class="glyph">
         ${iconUrl ? `
-          <img class="domain-icon" src="${iconUrl}" data-url="${bookmark.url}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
+          <img class="domain-icon" src="${iconUrl}" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
         ` : `<span class="domain-icon-fallback" style="display:inline-flex;">${glyph}</span>`}
       </div>
-      <div class="name">${bookmark.title}</div>
+      <div class="name">${escapeHTML(bookmark.title)}</div>
     `;
     
     pinStrip.appendChild(sticker);
@@ -336,7 +352,7 @@ function renderCategoryCards() {
     card.style.setProperty('--card-color', cardColor);
     card.setAttribute('data-cat', catKey);
     
-    const titleValue = catName.endsWith('/') ? catName : `${catName}/`;
+    const titleValue = escapeHTML(catName.endsWith('/') ? catName : `${catName}/`);
     
     card.innerHTML = `
       <div class="tape"></div>
@@ -373,12 +389,12 @@ function renderCategoryCards() {
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
-          <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${bookmark.url}">
+          <a href="${escapeHTML(bookmark.url)}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${escapeHTML(bookmark.url)}">
             ${iconUrl ? `
-              <img class="chip-icon" src="${iconUrl}" data-url="${bookmark.url}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
+              <img class="chip-icon" src="${iconUrl}" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
             ` : `<span class="domain-icon-fallback" style="display:inline-flex; font-size:10px;">${glyph}</span>`}
-            <span>${bookmark.title}</span>
+            <span>${escapeHTML(bookmark.title)}</span>
           </a>
           <div class="chip-actions">
             <button class="chip-btn btn-star-chip" title="${bookmark.pinned ? 'Unstar link' : 'Star/Pin link'}">★</button>
@@ -656,6 +672,11 @@ function saveState() {
   
   localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
   localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
+  
+  if (isInitialCloudFetchPending && isFreshDevice) {
+    console.warn('[Sync] Blocked cloud upload to prevent overwriting cloud with default template on fresh device.');
+    return;
+  }
   syncToCloud();
 }
 
@@ -680,9 +701,10 @@ async function syncFromCloud() {
     const res = await fetch('/api/bookmarks');
     if (res.ok) {
       const data = await res.json();
+      isInitialCloudFetchPending = false;
       
       // If user has already made local modifications, skip overwriting
-      if (isSyncedFromCloud) {
+      if (isSyncedFromCloud && !isFreshDevice) {
         console.log('[Sync] Cloud sync returned but local modifications already occurred. Skipping overwrite.');
         return;
       }
@@ -1001,8 +1023,8 @@ function handleSearchInput() {
     
     item.innerHTML = `
       <div class="search-result-info">
-        <span class="search-result-title">${result.title}</span>
-        <span class="search-result-url">${result.url}</span>
+        <span class="search-result-title">${escapeHTML(result.title)}</span>
+        <span class="search-result-url">${escapeHTML(result.url)}</span>
       </div>
       <div class="search-result-actions">
         <span class="search-result-category">${categories[result.category]}</span>
@@ -1033,7 +1055,7 @@ function handleSearchNavigation(e) {
     updateSearchSelection(items);
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    searchSelectedIndex = (searchSelectedIndex - 1 + items.length) % items.length;
+    searchSelectedIndex = searchSelectedIndex === -1 ? items.length - 1 : (searchSelectedIndex - 1 + items.length) % items.length;
     updateSearchSelection(items);
   } else if (e.key === 'Enter') {
     let targetIndex = searchSelectedIndex;
