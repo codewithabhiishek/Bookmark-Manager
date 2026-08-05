@@ -384,36 +384,34 @@ body.is-syncing {
   background: rgba(255, 0, 128, 0.08);
 }
 
-/* Floating Actions inside chips (hover edit/delete) */
+/* Inline Swap Actions inside chips (hover edit/delete) */
 .chip-actions {
-  display: none;
+  display: flex;
   position: absolute;
-  top: -32px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%) scale(0.95);
+  height: 105%;
+  width: 105%;
+  min-width: max-content;
   background: #0d100d;
   border: 1px solid var(--green);
-  border-radius: 6px;
-  padding: 4px 8px;
+  border-radius: 20px;
+  padding: 0 12px;
   z-index: 10;
-  gap: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
   align-items: center;
-}
-
-/* Pseudo-bridge to prevent losing hover when moving cursor to actions */
-.chip-actions::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  height: 14px;
-  background: transparent;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chip-wrapper:hover .chip-actions {
-  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .chip-btn {
