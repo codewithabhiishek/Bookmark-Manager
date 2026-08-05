@@ -159,9 +159,6 @@ if (savedCategories) {
 }
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
-let isSyncedFromCloud = false;
-let isInitialCloudFetchPending = true;
-const isFreshDevice = localStorage.getItem('zenmark_bookmarks_v4') === null;
 
 // DOM Elements
 const addDialog = document.getElementById('add-bookmark-dialog');
@@ -198,6 +195,7 @@ const btnAddCategoryTrigger = document.getElementById('btn-add-category-trigger'
 // Event Listeners Initialization
 // Event Listeners Initialization
 function init() {
+  document.body.inert = true;
   document.body.classList.add('is-syncing');
   renderAll();
   rotateMarqueeLogs();
@@ -691,8 +689,6 @@ function syncCategoryDropdown() {
 
 // Logic Events
 function saveState() {
-  isSyncedFromCloud = true; // Protect local modifications from being overwritten by startup load
-  
   // Ensure explicit ordering field is updated before saving
   bookmarks.forEach((b, index) => {
     b.sortIndex = index;
@@ -701,10 +697,6 @@ function saveState() {
   localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
   localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
   
-  if (isInitialCloudFetchPending && isFreshDevice) {
-    console.warn('[Sync] Blocked cloud upload to prevent overwriting cloud with default template on fresh device.');
-    return;
-  }
   syncToCloud();
 }
 
@@ -729,13 +721,6 @@ async function syncFromCloud() {
     const res = await fetch('/api/bookmarks');
     if (res.ok) {
       const data = await res.json();
-      isInitialCloudFetchPending = false;
-      
-      // If user has already made local modifications, skip overwriting
-      if (isSyncedFromCloud && !isFreshDevice) {
-        console.log('[Sync] Cloud sync returned but local modifications already occurred. Skipping overwrite.');
-        return;
-      }
       
       if (data && data.bookmarks && data.categories) {
         let newBookmarks = data.bookmarks;
@@ -752,7 +737,6 @@ async function syncFromCloud() {
         const newCategoriesStr = JSON.stringify(data.categories);
 
         if (currentBookmarksStr === newBookmarksStr && currentCategoriesStr === newCategoriesStr) {
-          isSyncedFromCloud = true;
           console.log('[Sync] Data is identical, skipping re-render.');
           return;
         }
@@ -763,7 +747,6 @@ async function syncFromCloud() {
         localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
         localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
         renderAll();
-        isSyncedFromCloud = true;
         console.log('[Sync] Successfully synchronized data from Vercel KV database.');
       } else {
         // Cloud is empty. Only initialize/upload if this client actually has existing local storage data.
@@ -774,12 +757,12 @@ async function syncFromCloud() {
         } else {
           console.log('[Sync] Cloud is empty, and local storage is empty. Waiting for data.');
         }
-        isSyncedFromCloud = true;
       }
     }
   } catch (err) {
     console.error('[Sync] Error syncing from cloud:', err);
   } finally {
+    document.body.inert = false;
     document.body.classList.remove('is-syncing');
   }
 }
@@ -1012,6 +995,9 @@ function togglePin(id) {
 }
 
 function copyLink(url, btnEl, tooltipEl) {
+  if (btnEl.dataset.isCopying) return;
+  btnEl.dataset.isCopying = "true";
+
   navigator.clipboard.writeText(url).then(() => {
     playSound('copy');
     tooltipEl.classList.add('show');
@@ -1023,6 +1009,7 @@ function copyLink(url, btnEl, tooltipEl) {
       tooltipEl.classList.remove('show');
       btnEl.textContent = originalText;
       btnEl.style.color = '';
+      delete btnEl.dataset.isCopying;
     }, 1200);
   }).catch(err => {
     console.error('Copy failed: ', err);
