@@ -121,14 +121,33 @@ function escapeHTML(str) {
 }
 
 // Application State
-let bookmarks = JSON.parse(localStorage.getItem('zenmark_bookmarks_v4')) || defaultBookmarks;
+let bookmarks = defaultBookmarks;
+try {
+  const localBookmarks = localStorage.getItem('zenmark_bookmarks_v4');
+  if (localBookmarks) {
+    bookmarks = JSON.parse(localBookmarks);
+  }
+} catch (e) {
+  console.warn('Failed to parse bookmarks from localStorage, using defaults.');
+}
+
 bookmarks.forEach((b, index) => {
   if (typeof b.sortIndex !== 'number') {
     b.sortIndex = index;
   }
 });
 bookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
-const savedCategories = JSON.parse(localStorage.getItem('zenmark_categories_v4'));
+
+let savedCategories = null;
+try {
+  const localCats = localStorage.getItem('zenmark_categories_v4');
+  if (localCats) {
+    savedCategories = JSON.parse(localCats);
+  }
+} catch (e) {
+  console.warn('Failed to parse categories from localStorage.');
+}
+
 let categories = savedCategories ? { ...savedCategories } : { ...defaultCategories };
 if (savedCategories) {
   // Preserve saved user key order 100%; only append missing defaults at the end if any
@@ -954,6 +973,11 @@ function deleteBookmark(id) {
 }
 
 function deleteCategory(catKey) {
+  if (Object.keys(categories).length <= 1) {
+    showToast('Cannot delete the final category!', true);
+    return;
+  }
+  
   const catName = categories[catKey] || catKey;
   // Remove bookmarks belonging to this category
   bookmarks = bookmarks.filter(b => b.category !== catKey);
