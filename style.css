@@ -426,6 +426,7 @@ body.is-syncing {
   justify-content: center;
   align-items: center;
   transition: all 0.1s ease;
+  text-decoration: none;
 }
 
 .chip-btn:hover {
