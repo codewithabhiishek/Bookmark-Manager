@@ -198,6 +198,7 @@ const btnAddCategoryTrigger = document.getElementById('btn-add-category-trigger'
 // Event Listeners Initialization
 // Event Listeners Initialization
 function init() {
+  document.body.classList.add('is-syncing');
   renderAll();
   rotateMarqueeLogs();
   
@@ -778,6 +779,8 @@ async function syncFromCloud() {
     }
   } catch (err) {
     console.error('[Sync] Error syncing from cloud:', err);
+  } finally {
+    document.body.classList.remove('is-syncing');
   }
 }
 
@@ -1299,8 +1302,13 @@ function playSound(type) {
       const etag = res.headers.get('etag') || res.headers.get('last-modified');
       if (etag) {
         if (initialETag && initialETag !== etag) {
-          console.log('[PWA Auto-Update] New version detected! Auto-reloading web app...');
-          window.location.reload();
+          const isDialogOpen = document.querySelector('dialog[open]');
+          if (!isDialogOpen) {
+            console.log('[PWA Auto-Update] New version detected! Auto-reloading web app...');
+            window.location.reload();
+          } else {
+            console.log('[PWA Auto-Update] New version detected, but user is interacting with a dialog. Deferring reload.');
+          }
         } else {
           initialETag = etag;
         }

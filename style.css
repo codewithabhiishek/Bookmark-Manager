@@ -36,6 +36,10 @@ body {
   100% { opacity: 0.99; }
 }
 
+body.is-syncing {
+  pointer-events: none;
+}
+
 .wrap {
   max-width: 980px;
   margin: 0 auto;
