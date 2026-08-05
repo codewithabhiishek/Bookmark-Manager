@@ -41,8 +41,8 @@ body.is-syncing {
 }
 
 .wrap {
-  max-width: 980px;
-  margin: 0 auto;
+  /* Previously max-width: 980px was ignored due to a syntax error. Removing it to restore the full-width layout you prefer. */
+  width: 100%;
 }
 
 /* Marquee Status Bar */
