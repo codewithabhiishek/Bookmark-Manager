@@ -324,7 +324,7 @@ function renderPinnedStickers() {
       <span class="pin-badge">★</span>
       <div class="glyph">
         ${iconUrl ? `
-          <img class="domain-icon" src="${iconUrl}" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
+          <img class="domain-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
         ` : `<span class="domain-icon-fallback" style="display:inline-flex;">${glyph}</span>`}
       </div>
@@ -391,7 +391,7 @@ function renderCategoryCards() {
         chipWrap.innerHTML = `
           <a href="${escapeHTML(bookmark.url)}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${escapeHTML(bookmark.url)}">
             ${iconUrl ? `
-              <img class="chip-icon" src="${iconUrl}" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
+              <img class="chip-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
             ` : `<span class="domain-icon-fallback" style="display:inline-flex; font-size:10px;">${glyph}</span>`}
             <span>${escapeHTML(bookmark.title)}</span>
@@ -518,6 +518,14 @@ function renderCategoryCards() {
     card.querySelector('.btn-card-edit-cat').addEventListener('click', (e) => {
       openEditCategoryModal(catKey);
     });
+
+    // Bind Double-Click on Title to Rename
+    const titleInput = card.querySelector('.card-title-input');
+    if (titleInput) {
+      titleInput.addEventListener('dblclick', () => {
+        openEditCategoryModal(catKey);
+      });
+    }
     
     // Bind Card Delete [✖]
     card.querySelector('.btn-card-delete').addEventListener('click', (e) => {
@@ -710,15 +718,27 @@ async function syncFromCloud() {
       }
       
       if (data && data.bookmarks && data.categories) {
-        bookmarks = data.bookmarks;
-        categories = data.categories;
-        
-        bookmarks.forEach((b, index) => {
+        let newBookmarks = data.bookmarks;
+        newBookmarks.forEach((b, index) => {
           if (typeof b.sortIndex !== 'number') {
             b.sortIndex = index;
           }
         });
-        bookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
+        newBookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
+        
+        const currentBookmarksStr = JSON.stringify(bookmarks);
+        const newBookmarksStr = JSON.stringify(newBookmarks);
+        const currentCategoriesStr = JSON.stringify(categories);
+        const newCategoriesStr = JSON.stringify(data.categories);
+
+        if (currentBookmarksStr === newBookmarksStr && currentCategoriesStr === newCategoriesStr) {
+          isSyncedFromCloud = true;
+          console.log('[Sync] Data is identical, skipping re-render.');
+          return;
+        }
+
+        bookmarks = newBookmarks;
+        categories = data.categories;
         
         localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
         localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
