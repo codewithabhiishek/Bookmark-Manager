@@ -415,7 +415,6 @@ function renderCategoryCards() {
             <span>${escapeHTML(bookmark.title)}</span>
           </a>
           <div class="chip-actions">
-            <a href="${escapeHTML(bookmark.url)}" target="_blank" rel="noopener noreferrer" class="chip-btn btn-open-chip" title="Open link">↗</a>
             <button class="chip-btn btn-star-chip" title="${bookmark.pinned ? 'Unstar link' : 'Star/Pin link'}">★</button>
             <button class="chip-btn btn-edit-chip" title="Edit link">✎</button>
             <button class="chip-btn btn-copy-chip" title="Copy share link">❐</button>
