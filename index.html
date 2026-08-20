@@ -11,21 +11,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>
-    window.handleFaviconError = function(img, host, origin) {
+    window.handleFaviconError = function(img) {
+      if (!img) return;
+      const host = img.getAttribute('data-host') || '';
+      const origin = img.getAttribute('data-origin') || (host ? `https://${host}` : '');
       const step = parseInt(img.getAttribute('data-fallback-step') || '1');
-      const origUrl = img.getAttribute('data-url') || `https://${host}`;
+      const origUrl = img.getAttribute('data-url') || (host ? `https://${host}` : '');
       const failedUrl = img.src;
-      const resolvedOrigin = origin || `https://${host}`;
+      const resolvedOrigin = origin || (host ? `https://${host}` : '');
       
       const isDebug = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || localStorage.getItem('ZENMARK_DEBUG') === 'true';
       
-      if (step === 1) {
+      if (step === 1 && host) {
         // Attempt #1 failed, switching to Attempt #2 (Google Favicon API)
-        const nextUrl = `https://www.google.com/s2/favicons?sz=64&domain=${host}`;
+        const nextUrl = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}`;
         if (isDebug) console.warn(`[Favicon Pipeline] Attempt #1 Failed (${failedUrl}). Switching to Attempt #2:`, { origUrl, host, nextUrl, status: 'HTTP 404 / Error' });
         img.setAttribute('data-fallback-step', '2');
         img.src = nextUrl;
-      } else if (step === 2) {
+      } else if (step === 2 && resolvedOrigin) {
         // Attempt #2 failed, switching to Attempt #3 (Direct origin /favicon.ico)
         const nextUrl = `${resolvedOrigin}/favicon.ico`;
         if (isDebug) console.warn(`[Favicon Pipeline] Attempt #2 Failed (${failedUrl}). Switching to Attempt #3:`, { origUrl, host, nextUrl, status: 'HTTP 404 / Error' });

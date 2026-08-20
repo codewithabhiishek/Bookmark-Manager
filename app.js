@@ -394,7 +394,7 @@ function renderPinnedStickers() {
       <span class="pin-badge">★</span>
       <div class="glyph">
         ${iconUrl ? `
-          <img class="domain-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
+          <img class="domain-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" data-host="${escapeHTML(host)}" data-origin="${escapeHTML(origin)}" alt=""${isProjectIcon ? '' : ' onerror="window.handleFaviconError(this)"'}>
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
         ` : `<span class="domain-icon-fallback" style="display:inline-flex;">${glyph}</span>`}
       </div>
@@ -461,7 +461,7 @@ function renderCategoryCards() {
         chipWrap.innerHTML = `
           <a href="${escapeHTML(bookmark.url)}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${escapeHTML(bookmark.url)}">
             ${iconUrl ? `
-              <img class="chip-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" alt=""${isProjectIcon ? '' : ` onerror="window.handleFaviconError(this, '${host}', '${origin}')"`}>
+              <img class="chip-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" data-host="${escapeHTML(host)}" data-origin="${escapeHTML(origin)}" alt=""${isProjectIcon ? '' : ' onerror="window.handleFaviconError(this)"'}>
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
             ` : `<span class="domain-icon-fallback" style="display:inline-flex; font-size:10px;">${glyph}</span>`}
             <span>${escapeHTML(bookmark.title)}</span>
