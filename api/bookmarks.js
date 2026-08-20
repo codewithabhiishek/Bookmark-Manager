@@ -6,27 +6,51 @@ export default async function handler(req) {
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
 
-  if (!url || !token) {
-    return new Response(
-      JSON.stringify({ error: "Missing database environment variables." }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-  }
-
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, x-sync-key',
     'Content-Type': 'application/json'
   };
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers });
   }
+
+  if (!url || !token) {
+    return new Response(
+      JSON.stringify({ error: "Missing database environment variables." }),
+      {
+        status: 500,
+        headers
+      }
+    );
+  }
+
+  // Extract and validate sync key from header or URL parameter
+  const reqUrl = new URL(req.url);
+  const rawKey = req.headers.get('x-sync-key') || reqUrl.searchParams.get('syncKey') || '';
+  const syncKey = rawKey.trim();
+
+  if (!syncKey) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized: Sync key is required to access cloud bookmarks." }),
+      { status: 401, headers }
+    );
+  }
+
+  // Validate key format: 8 to 64 alphanumeric characters, underscores, or hyphens
+  const validKeyRegex = /^[a-zA-Z0-9_-]{8,64}$/;
+  if (!validKeyRegex.test(syncKey)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid sync key format. Key must be 8-64 alphanumeric characters, dashes, or underscores." }),
+      { status: 400, headers }
+    );
+  }
+
+  // Multi-tenant scoped key in Redis/KV
+  const storageKey = `bookmarks_vault_${syncKey}`;
 
   if (req.method === 'GET') {
     try {
@@ -36,7 +60,7 @@ export default async function handler(req) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(["GET", "bookmarks_dashboard_data"])
+        body: JSON.stringify(["GET", storageKey])
       });
       const data = await response.json();
       const payload = data.result ? JSON.parse(data.result) : null;
@@ -58,7 +82,7 @@ export default async function handler(req) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(["SET", "bookmarks_dashboard_data", JSON.stringify(payload)])
+        body: JSON.stringify(["SET", storageKey, JSON.stringify(payload)])
       });
       const data = await response.json();
       return new Response(
@@ -78,3 +102,4 @@ export default async function handler(req) {
     { status: 405, headers }
   );
 }
+

@@ -919,5 +919,132 @@ dialog#search-dialog {
   }
 }
 
+/* Cloud Sync UI Components */
+.btn-retro-sync {
+  border-color: var(--amber);
+  color: var(--amber);
+}
 
+.btn-retro-sync.is-synced {
+  border-color: var(--green);
+  color: var(--green);
+}
 
+.btn-retro-danger {
+  background: transparent;
+  border: 1px solid var(--pink);
+  color: var(--pink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.btn-retro-danger:hover {
+  background: var(--pink);
+  color: #000;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.sync-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sync-status-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #060806;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--amber);
+}
+
+.sync-status-box.is-synced {
+  color: var(--green);
+  border-color: rgba(57, 255, 20, 0.3);
+}
+
+.sync-status-indicator {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.sync-card {
+  background: #080a08;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sync-label {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: bold;
+}
+
+.sync-key-display-group,
+.sync-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sync-key-display-group input,
+.sync-input-row input {
+  flex: 1;
+}
+
+.sync-hint {
+  font-size: 9.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.sync-subhint {
+  font-size: 9.5px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-top: 5px;
+}
+
+.sync-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 9px;
+  margin: 4px 0;
+}
+
+.sync-divider::before,
+.sync-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dashed var(--border);
+}
+
+.sync-divider span {
+  padding: 0 8px;
+}
+
+.sync-actions-group,
+.sync-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

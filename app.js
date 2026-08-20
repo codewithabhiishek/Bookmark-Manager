@@ -122,6 +122,8 @@ function escapeHTML(str) {
 
 // Application State
 let bookmarks = defaultBookmarks;
+let syncKey = localStorage.getItem('zenmark_sync_key') || '';
+
 try {
   const localBookmarks = localStorage.getItem('zenmark_bookmarks_v4');
   if (localBookmarks) {
@@ -192,16 +194,64 @@ const btnCloseAddCat = document.getElementById('btn-close-add-cat');
 const btnCancelAddCat = document.getElementById('btn-cancel-add-cat');
 const btnAddCategoryTrigger = document.getElementById('btn-add-category-trigger');
 
-// Event Listeners Initialization
+// Cloud Sync DOM Elements
+const btnSyncTrigger = document.getElementById('btn-sync-trigger');
+const syncDialog = document.getElementById('sync-dialog');
+const btnCloseSync = document.getElementById('btn-close-sync');
+const syncStatusBox = document.getElementById('sync-status-box');
+const syncStatusIndicator = document.getElementById('sync-status-indicator');
+const syncStatusLabel = document.getElementById('sync-status-label');
+const syncActiveKey = document.getElementById('sync-active-key');
+const btnCopySyncKey = document.getElementById('btn-copy-sync-key');
+const btnGenerateSyncKey = document.getElementById('btn-generate-sync-key');
+const syncInputKey = document.getElementById('sync-input-key');
+const btnConnectSyncKey = document.getElementById('btn-connect-sync-key');
+const btnDisconnectSync = document.getElementById('btn-disconnect-sync');
+
 // Event Listeners Initialization
 function init() {
-  document.body.inert = true;
-  document.body.classList.add('is-syncing');
+  if (syncKey) {
+    document.body.inert = true;
+    document.body.classList.add('is-syncing');
+  }
   renderAll();
   rotateMarqueeLogs();
+  updateSyncUI();
   
-  // Sync bookmarks and categories with Upstash Redis
-  syncFromCloud();
+  // Sync bookmarks and categories if syncKey is configured
+  if (syncKey) {
+    syncFromCloud();
+  } else {
+    document.body.inert = false;
+    document.body.classList.remove('is-syncing');
+  }
+
+  // Cloud Sync Modal listeners
+  if (btnSyncTrigger) {
+    btnSyncTrigger.addEventListener('click', () => {
+      playSound('click');
+      updateSyncUI();
+      syncDialog.showModal();
+    });
+  }
+  if (btnCloseSync) {
+    btnCloseSync.addEventListener('click', () => {
+      playSound('click');
+      syncDialog.close();
+    });
+  }
+  if (btnCopySyncKey) {
+    btnCopySyncKey.addEventListener('click', handleCopySyncKey);
+  }
+  if (btnGenerateSyncKey) {
+    btnGenerateSyncKey.addEventListener('click', handleGenerateNewSyncKey);
+  }
+  if (btnConnectSyncKey) {
+    btnConnectSyncKey.addEventListener('click', handleConnectSyncKey);
+  }
+  if (btnDisconnectSync) {
+    btnDisconnectSync.addEventListener('click', handleDisconnectSync);
+  }
 
   // Modal toggle listeners
   btnAddTrigger.addEventListener('click', () => { playSound('click'); openAddModal(); });
@@ -228,6 +278,7 @@ function init() {
   btnCloseAddCat.addEventListener('click', () => { playSound('click'); addCatDialog.close(); });
   btnCancelAddCat.addEventListener('click', () => { playSound('click'); addCatDialog.close(); });
   addCatForm.addEventListener('submit', handleAddCategorySubmit);
+
 
   // Edit Category Modal toggle listeners
   btnCloseEditCat.addEventListener('click', () => { playSound('click'); editCatDialog.close(); });
@@ -302,7 +353,8 @@ function renderAll() {
 function renderMarquee() {
   const textEl = document.getElementById('marquee-text');
   if (textEl) {
-    textEl.textContent = `» jugaad mode: on • ${bookmarks.length} bookmarks loaded • status: synced • welcome back abhishek «`;
+    const statusText = syncKey ? 'cloud synced' : 'local mode (offline)';
+    textEl.textContent = `» jugaad mode: on • ${bookmarks.length} bookmarks loaded • status: ${statusText} • welcome back abhishek «`;
   }
 }
 
@@ -687,6 +739,121 @@ function syncCategoryDropdown() {
   });
 }
 
+// ── Cloud Sync Management & Security ──────────────────────────────────────────
+function generateSecureKey() {
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `zen-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+}
+
+function updateSyncUI() {
+  if (syncKey) {
+    if (btnSyncTrigger) {
+      btnSyncTrigger.textContent = '[☁️ SYNC: ACTIVE]';
+      btnSyncTrigger.classList.add('is-synced');
+    }
+    if (syncStatusBox) {
+      syncStatusBox.classList.add('is-synced');
+    }
+    if (syncStatusLabel) {
+      syncStatusLabel.textContent = 'Status: Cloud Synced (Private Key Active)';
+    }
+    if (syncActiveKey) {
+      syncActiveKey.value = syncKey;
+    }
+    if (btnCopySyncKey) {
+      btnCopySyncKey.style.display = 'inline-block';
+    }
+    if (btnDisconnectSync) {
+      btnDisconnectSync.style.display = 'block';
+    }
+  } else {
+    if (btnSyncTrigger) {
+      btnSyncTrigger.textContent = '[☁️ SYNC: LOCAL]';
+      btnSyncTrigger.classList.remove('is-synced');
+    }
+    if (syncStatusBox) {
+      syncStatusBox.classList.remove('is-synced');
+    }
+    if (syncStatusLabel) {
+      syncStatusLabel.textContent = 'Status: Local Storage Only (Offline / Guest)';
+    }
+    if (syncActiveKey) {
+      syncActiveKey.value = '';
+    }
+    if (btnCopySyncKey) {
+      btnCopySyncKey.style.display = 'none';
+    }
+    if (btnDisconnectSync) {
+      btnDisconnectSync.style.display = 'none';
+    }
+  }
+  renderMarquee();
+}
+
+async function handleGenerateNewSyncKey() {
+  playSound('success');
+  const newKey = generateSecureKey();
+  syncKey = newKey;
+  localStorage.setItem('zenmark_sync_key', syncKey);
+  updateSyncUI();
+  
+  // Instantly upload current bookmarks to the new cloud vault
+  showToast('⚡ Uploading your links to new private vault...', 2500);
+  await syncToCloud();
+  
+  // Copy to clipboard
+  try {
+    await navigator.clipboard.writeText(newKey);
+    showToast('🔑 New Sync Key created & copied to clipboard!', 4000);
+  } catch (e) {
+    showToast('🔑 New Sync Key created: ' + newKey, 4000);
+  }
+}
+
+async function handleConnectSyncKey() {
+  const enteredKey = syncInputKey ? syncInputKey.value.trim() : '';
+  if (!enteredKey) {
+    showToast('❌ Please enter a sync key.', 2500);
+    return;
+  }
+  const validKeyRegex = /^[a-zA-Z0-9_-]{8,64}$/;
+  if (!validKeyRegex.test(enteredKey)) {
+    showToast('❌ Invalid format. Key must be 8-64 alphanumeric characters.', 3000);
+    return;
+  }
+  
+  playSound('click');
+  syncKey = enteredKey;
+  localStorage.setItem('zenmark_sync_key', syncKey);
+  if (syncInputKey) syncInputKey.value = '';
+  updateSyncUI();
+  
+  showToast('🔄 Connecting and syncing bookmarks from cloud...', 2500);
+  await syncFromCloud();
+  showToast(' Cloud Sync Connected Successfully!', 3000);
+}
+
+async function handleCopySyncKey() {
+  if (!syncKey) return;
+  try {
+    await navigator.clipboard.writeText(syncKey);
+    playSound('copy');
+    showToast('📋 Sync Key copied to clipboard!', 2500);
+  } catch (e) {
+    showToast('📋 Key: ' + syncKey, 4000);
+  }
+}
+
+function handleDisconnectSync() {
+  playSound('click');
+  syncKey = '';
+  localStorage.removeItem('zenmark_sync_key');
+  updateSyncUI();
+  showToast(' Cloud sync disconnected. Using Local-Only mode.', 3000);
+}
+
 // Logic Events
 function saveState() {
   // Ensure explicit ordering field is updated before saving
@@ -701,15 +868,22 @@ function saveState() {
 }
 
 async function syncToCloud() {
+  if (!syncKey) {
+    // Local-only / Guest mode: bookmarks remain safely in browser localStorage
+    return;
+  }
   try {
     const payload = { bookmarks, categories };
     const res = await fetch('/api/bookmarks', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-sync-key': syncKey
+      },
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      console.warn('[Sync] Failed to sync data to Vercel KV database.');
+      console.warn('[Sync] Failed to sync data to cloud database.');
     }
   } catch (err) {
     console.error('[Sync] Error syncing to cloud:', err);
@@ -717,8 +891,18 @@ async function syncToCloud() {
 }
 
 async function syncFromCloud() {
+  if (!syncKey) {
+    document.body.inert = false;
+    document.body.classList.remove('is-syncing');
+    updateSyncUI();
+    return;
+  }
   try {
-    const res = await fetch('/api/bookmarks');
+    const res = await fetch('/api/bookmarks', {
+      headers: {
+        'x-sync-key': syncKey
+      }
+    });
     if (res.ok) {
       const data = await res.json();
       
@@ -747,23 +931,26 @@ async function syncFromCloud() {
         localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
         localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
         renderAll();
-        console.log('[Sync] Successfully synchronized data from Vercel KV database.');
+        console.log('[Sync] Successfully synchronized data from cloud database.');
       } else {
-        // Cloud is empty. Only initialize/upload if this client actually has existing local storage data.
+        // Cloud is empty for this key. Initialize cloud database with current local data so nothing is lost.
         const hasLocalStorage = localStorage.getItem('zenmark_bookmarks_v4') !== null;
         if (hasLocalStorage) {
-          console.log('[Sync] Cloud is empty. Initializing cloud database with local data...');
+          console.log('[Sync] Cloud is empty for this key. Initializing cloud vault with current local data...');
           await syncToCloud();
         } else {
-          console.log('[Sync] Cloud is empty, and local storage is empty. Waiting for data.');
+          console.log('[Sync] Cloud is empty for this key, and local storage is empty.');
         }
       }
+    } else if (res.status === 401 || res.status === 400) {
+      console.warn('[Sync] Unauthorized or invalid sync key.');
     }
   } catch (err) {
     console.error('[Sync] Error syncing from cloud:', err);
   } finally {
     document.body.inert = false;
     document.body.classList.remove('is-syncing');
+    updateSyncUI();
   }
 }
 
