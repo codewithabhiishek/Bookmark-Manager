@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>~</title>
+  <meta name="description" content="A lil retro scrapbook for your favorite corners of the internet.">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    window.handleFaviconError = function(img) {
+      if (!img) return;
+      const host = img.getAttribute('data-host') || '';
+      const origin = img.getAttribute('data-origin') || (host ? `https://${host}` : '');
+      const step = parseInt(img.getAttribute('data-fallback-step') || '1');
+      const origUrl = img.getAttribute('data-url') || (host ? `https://${host}` : '');
+      const failedUrl = img.src;
+      const resolvedOrigin = origin || (host ? `https://${host}` : '');
+      
+      const isDebug = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || localStorage.getItem('ZENMARK_DEBUG') === 'true';
+      
+      if (step === 1 && host) {
+        // Attempt #1 failed, switching to Attempt #2 (Google Favicon API)
+        const nextUrl = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}`;
+        if (isDebug) console.warn(`[Favicon Pipeline] Attempt #1 Failed (${failedUrl}). Switching to Attempt #2:`, { origUrl, host, nextUrl, status: 'HTTP 404 / Error' });
+        img.setAttribute('data-fallback-step', '2');
+        img.src = nextUrl;
+      } else if (step === 2 && resolvedOrigin) {
+        // Attempt #2 failed, switching to Attempt #3 (Direct origin /favicon.ico)
+        const nextUrl = `${resolvedOrigin}/favicon.ico`;
+        if (isDebug) console.warn(`[Favicon Pipeline] Attempt #2 Failed (${failedUrl}). Switching to Attempt #3:`, { origUrl, host, nextUrl, status: 'HTTP 404 / Error' });
+        img.setAttribute('data-fallback-step', '3');
+        img.src = nextUrl;
+      } else {
+        // All network attempts failed, fallback to clean placeholder badge
+        if (isDebug) console.warn(`[Favicon Pipeline] All network providers failed for ${host}. Using default placeholder badge.`, { origUrl, host, failedUrl, finalStatus: 'Displayed Placeholder Badge' });
+        img.style.display = 'none';
+        const fallbackSpan = img.nextElementSibling;
+        if (fallbackSpan && fallbackSpan.classList.contains('domain-icon-fallback')) {
+          fallbackSpan.style.display = 'inline-flex';
+        }
+      }
+    };
+  </script>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Scrolling status marquee -->
+  <div class="marquee">
+    <span id="marquee-text">» jugaad mode: on • 00 bookmarks loaded • status: synced • welcome back abhishek «</span>
+  </div>
+
+  <!-- Hero Branding -->
+  <div class="hero">
+    <div class="hero-flex">
+      <div>
+        <p class="pixel-title">Bookmarks</p>
+        <p class="subtitle">a lil scrapbook for your <b>favorite corners</b> of the internet.</p>
+      </div>
+      <div class="hero-buttons">
+        <a href="/" class="btn-retro" style="text-decoration:none; display:inline-flex; align-items:center;">[ℹ️ ABOUT]</a>
+        <button id="btn-sync-trigger" class="btn-retro btn-retro-sync" title="Manage Cloud Sync">[☁️ SYNC: LOCAL]</button>
+        <button id="btn-add-category-trigger" class="btn-retro">[+ ADD CATEGORY]</button>
+        <button id="btn-add-trigger" class="btn-retro">[+ ADD LINK]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pinned / Starred stickers row -->
+  <p class="section-tag">★ pinned</p>
+  <div class="pin-strip" id="pin-strip">
+    <!-- Pinned stickers loaded dynamically by app.js -->
+  </div>
+
+  <!-- All categories layout board -->
+  <p class="section-tag" style="background:var(--green); color:var(--bg);">all categories</p>
+  <div class="board" id="categories-board">
+    <!-- Category card nodes loaded dynamically by app.js -->
+  </div>
+
+  <p class="footer-line">press / anywhere to search • click any chip to open • double-click category title to rename</p>
+</div>
+
+<!-- Add Bookmark Modal Dialog -->
+<dialog id="add-bookmark-dialog">
+  <div class="dialog-header">
+    <h3>:: ADD NEW LINK ::</h3>
+    <button class="btn-retro-close" id="btn-close-add" aria-label="Close dialog">[X]</button>
+  </div>
+  <form id="add-bookmark-form" method="dialog">
+    <div class="dialog-body">
+      <div class="form-group">
+        <label for="bookmark-url">> URL:</label>
+        <input type="url" id="bookmark-url" class="form-control" placeholder="https://example.com" required autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="bookmark-title">> TITLE:</label>
+        <input type="text" id="bookmark-title" class="form-control" placeholder="Optional Title" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="bookmark-category">> CATEGORY:</label>
+        <select id="bookmark-category" class="form-control" required>
+          <option value="dev">dev-tools/</option>
+          <option value="design">design-frontend/</option>
+          <option value="learning">learning/</option>
+          <option value="freelance">freelance-tools/</option>
+          <option value="personal">personal/</option>
+        </select>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn-retro-secondary" id="btn-cancel-add">[ CANCEL ]</button>
+      <button type="submit" class="btn-retro-primary" id="btn-submit-add">[ SUBMIT ]</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Add Category Modal Dialog -->
+<dialog id="add-category-dialog">
+  <div class="dialog-header">
+    <h3>:: CREATE NEW CATEGORY ::</h3>
+    <button class="btn-retro-close" id="btn-close-add-cat" type="button" aria-label="Close dialog">[X]</button>
+  </div>
+  <form id="add-category-form" method="dialog">
+    <div class="dialog-body">
+      <div class="form-group">
+        <label for="add-category-name">> CATEGORY NAME:</label>
+        <input type="text" id="add-category-name" class="form-control" placeholder="e.g. Work" required autocomplete="off">
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn-retro-secondary" id="btn-cancel-add-cat">[ CANCEL ]</button>
+      <button type="submit" class="btn-retro-primary" id="btn-submit-add-cat">[ CREATE ]</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Edit Bookmark Modal Dialog -->
+<dialog id="edit-bookmark-dialog">
+  <div class="dialog-header">
+    <h3>:: EDIT LINK ::</h3>
+    <button class="btn-retro-close" id="btn-close-edit" type="button" aria-label="Close dialog">[X]</button>
+  </div>
+  <form id="edit-bookmark-form" method="dialog">
+    <input type="hidden" id="edit-bookmark-id">
+    <div class="dialog-body">
+      <div class="form-group">
+        <label for="edit-bookmark-url">> URL:</label>
+        <input type="url" id="edit-bookmark-url" class="form-control" placeholder="https://example.com" required autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="edit-bookmark-title">> TITLE:</label>
+        <input type="text" id="edit-bookmark-title" class="form-control" placeholder="Optional Title" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="edit-bookmark-category">> CATEGORY:</label>
+        <select id="edit-bookmark-category" class="form-control" required>
+          <!-- Synced dynamically by app.js -->
+        </select>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn-retro-secondary" id="btn-cancel-edit">[ CANCEL ]</button>
+      <button type="submit" class="btn-retro-primary" id="btn-submit-edit">[ SAVE ]</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Edit Category Modal Dialog -->
+<dialog id="edit-category-dialog">
+  <div class="dialog-header">
+    <h3>:: RENAME CATEGORY ::</h3>
+    <button class="btn-retro-close" id="btn-close-edit-cat" type="button" aria-label="Close dialog">[X]</button>
+  </div>
+  <form id="edit-category-form" method="dialog">
+    <input type="hidden" id="edit-category-key">
+    <div class="dialog-body">
+      <div class="form-group">
+        <label for="edit-category-name">> CATEGORY NAME:</label>
+        <input type="text" id="edit-category-name" class="form-control" placeholder="e.g. Design" required autocomplete="off">
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn-retro-secondary" id="btn-cancel-edit-cat">[ CANCEL ]</button>
+      <button type="submit" class="btn-retro-primary" id="btn-submit-edit-cat">[ SAVE ]</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Cloud Sync Modal Dialog -->
+<dialog id="sync-dialog">
+  <div class="dialog-header">
+    <h3>:: CLOUD SYNC & PRIVACY ::</h3>
+    <button class="btn-retro-close" id="btn-close-sync" type="button" aria-label="Close dialog">[X]</button>
+  </div>
+  <div class="dialog-body sync-dialog-body">
+    <div class="sync-status-box" id="sync-status-box">
+      <span class="sync-status-indicator" id="sync-status-indicator">●</span>
+      <span id="sync-status-label">Status: Local Storage Only (Offline)</span>
+    </div>
+    
+    <div class="sync-card" id="sync-active-card">
+      <label class="sync-label">> ACTIVE SYNC KEY:</label>
+      <div class="sync-key-display-group">
+        <input type="text" id="sync-active-key" class="form-control mono-font" readonly placeholder="No sync key linked" autocomplete="off">
+        <button type="button" id="btn-copy-sync-key" class="btn-retro-secondary" title="Copy Key to Clipboard">[ COPY ]</button>
+      </div>
+      <p class="sync-hint">Keep this key private! Paste this exact key on your phone or other computers to sync your links seamlessly.</p>
+    </div>
+
+    <div class="sync-divider"><span>OR MANAGE KEYS</span></div>
+
+    <div class="sync-actions-group">
+      <button type="button" class="btn-retro-primary w-100" id="btn-generate-sync-key">
+        [ ⚡ GENERATE NEW SECURE KEY ]
+      </button>
+      <p class="sync-subhint">Creates an unguessable private key and saves your current bookmarks to your personal cloud locker.</p>
+    </div>
+
+    <div class="sync-form-group">
+      <label for="sync-input-key" class="sync-label">> LINK EXISTING KEY (PHONE / OTHER PC):</label>
+      <div class="sync-input-row">
+        <input type="text" id="sync-input-key" class="form-control" placeholder="Paste your sync key here..." autocomplete="off">
+        <button type="button" class="btn-retro-primary" id="btn-connect-sync-key">[ CONNECT ]</button>
+      </div>
+    </div>
+
+    <div class="sync-footer-actions">
+      <button type="button" class="btn-retro-danger" id="btn-disconnect-sync">[ DISCONNECT (SWITCH TO LOCAL ONLY) ]</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Search Command Palette Dialog (Retro Terminal Theme) -->
+<dialog id="search-dialog">
+  <div class="search-dialog-container">
+    <div class="search-input-wrapper">
+      <span class="search-prompt">> </span>
+      <input type="text" id="search-input" class="search-input-field" placeholder="search links by name/url..." aria-label="Search bookmarks" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <span class="search-escape-hint">[ESC]</span>
+    </div>
+    <div class="search-results-list" id="search-results">
+      <!-- Search result items generated by app.js -->
+    </div>
+  </div>
+</dialog>
+
+<!-- Toast Notification Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>

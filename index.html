@@ -3,254 +3,531 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>~</title>
-  <meta name="description" content="A lil retro scrapbook for your favorite corners of the internet.">
+  <title>Bookmarks — The Retro Web Scrapbook</title>
+  <meta name="description" content="A lightning-fast, local-first visual bookmark manager with a retro hacker terminal aesthetic, sound effects, instant keyboard navigation, and secure cross-device cloud sync.">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <script>
-    window.handleFaviconError = function(img) {
-      if (!img) return;
-      const host = img.getAttribute('data-host') || '';
-      const origin = img.getAttribute('data-origin') || (host ? `https://${host}` : '');
-      const step = parseInt(img.getAttribute('data-fallback-step') || '1');
-      const origUrl = img.getAttribute('data-url') || (host ? `https://${host}` : '');
-      const failedUrl = img.src;
-      const resolvedOrigin = origin || (host ? `https://${host}` : '');
-      
-      const isDebug = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || localStorage.getItem('ZENMARK_DEBUG') === 'true';
-      
-      if (step === 1 && host) {
-        // Attempt #1 failed, switching to Attempt #2 (Google Favicon API)
-        const nextUrl = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}`;
-        if (isDebug) console.warn(`[Favicon Pipeline] Attempt #1 Failed (${failedUrl}). Switching to Attempt #2:`, { origUrl, host, nextUrl, status: 'HTTP 404 / Error' });
-        img.setAttribute('data-fallback-step', '2');
-        img.src = nextUrl;
-      } else if (step === 2 && resolvedOrigin) {
-        // Attempt #2 failed, switching to Attempt #3 (Direct origin /favicon.ico)
-        const nextUrl = `${resolvedOrigin}/favicon.ico`;
-        if (isDebug) console.warn(`[Favicon Pipeline] Attempt #2 Failed (${failedUrl}). Switching to Attempt #3:`, { origUrl, host, nextUrl, status: 'HTTP 404 / Error' });
-        img.setAttribute('data-fallback-step', '3');
-        img.src = nextUrl;
-      } else {
-        // All network attempts failed, fallback to clean placeholder badge
-        if (isDebug) console.warn(`[Favicon Pipeline] All network providers failed for ${host}. Using default placeholder badge.`, { origUrl, host, failedUrl, finalStatus: 'Displayed Placeholder Badge' });
-        img.style.display = 'none';
-        const fallbackSpan = img.nextElementSibling;
-        if (fallbackSpan && fallbackSpan.classList.contains('domain-icon-fallback')) {
-          fallbackSpan.style.display = 'inline-flex';
-        }
-      }
-    };
-  </script>
+  <style>
+    /* Landing page specific layout styles using exact theme tokens */
+    .landing-wrap {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 10px;
+    }
+
+    .landing-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .landing-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .hero-box {
+      text-align: center;
+      padding: 40px 16px 50px;
+      border: 1px solid var(--border);
+      background: rgba(13, 16, 13, 0.7);
+      border-radius: 8px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-tagline {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--pink);
+      border: 1px solid rgba(255, 0, 128, 0.4);
+      background: rgba(255, 0, 128, 0.08);
+      padding: 6px 14px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+    }
+
+    .hero-h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(20px, 4.2vw, 36px);
+      color: var(--green);
+      text-shadow: 3px 3px 0 var(--pink);
+      line-height: 1.4;
+      margin-bottom: 20px;
+    }
+
+    .hero-sub {
+      font-size: 15px;
+      color: #cdf7c4;
+      max-width: 680px;
+      margin: 0 auto 32px;
+      line-height: 1.7;
+      opacity: 0.9;
+    }
+
+    .cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .btn-main-cta {
+      background: var(--green);
+      color: #0a0a0a !important;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 13px;
+      padding: 16px 28px;
+      border: 2px solid var(--green);
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 700;
+      box-shadow: 4px 4px 0 var(--pink);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-main-cta:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--pink);
+      background: #4aff28;
+    }
+
+    .btn-main-cta:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 var(--pink);
+    }
+
+    .btn-sec-cta {
+      background: transparent;
+      color: var(--green) !important;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      padding: 16px 24px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn-sec-cta:hover {
+      border-color: var(--green);
+      background: rgba(57, 255, 20, 0.1);
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+    }
+
+    .trust-strip {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .trust-item span.icon {
+      color: var(--green);
+    }
+
+    /* Interactive Preview Mockup */
+    .mockup-card {
+      border: 1px solid var(--border);
+      background: #0d100d;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 48px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .mockup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+
+    .mockup-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mockup-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .grid-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .preview-cat {
+      border: 1px solid var(--border);
+      background: rgba(10, 10, 10, 0.8);
+      border-radius: 6px;
+      padding: 16px;
+    }
+
+    .preview-cat-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: var(--amber);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .preview-link-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #121612;
+      border: 1px solid rgba(57, 255, 20, 0.12);
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .preview-link-row:hover {
+      border-color: var(--green);
+      background: #171d17;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+
+    .feat-card {
+      border: 1px solid var(--border);
+      background: #0d100d;
+      border-radius: 6px;
+      padding: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .feat-card:hover {
+      border-color: var(--green);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(57, 255, 20, 0.12);
+    }
+
+    .feat-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--pink);
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .feat-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 13px;
+      color: var(--green);
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .feat-desc {
+      font-size: 13px;
+      color: #cdf7c4;
+      line-height: 1.6;
+      opacity: 0.85;
+    }
+
+    /* 3 Steps */
+    .steps-section {
+      border: 1px solid var(--border);
+      background: #0d100d;
+      border-radius: 8px;
+      padding: 36px 24px;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 24px;
+      margin-top: 28px;
+      text-align: left;
+    }
+
+    .step-box {
+      border: 1px solid rgba(57, 255, 20, 0.15);
+      background: #0a0a0a;
+      padding: 20px;
+      border-radius: 6px;
+    }
+
+    .step-num {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 18px;
+      color: var(--pink);
+      margin-bottom: 10px;
+    }
+
+    /* Footer */
+    .landing-footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .landing-footer a {
+      color: var(--green);
+      text-decoration: none;
+    }
+
+    .landing-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
+<div class="landing-wrap">
 
   <!-- Scrolling status marquee -->
   <div class="marquee">
-    <span id="marquee-text">» jugaad mode: on • 00 bookmarks loaded • status: synced • welcome back abhishek «</span>
+    <span>» 100% FREE · LOCAL-FIRST URL VAULT · ZERO SIGNUPS · 128-BIT CLOUD SYNC · PRESS / ANYWHERE FOR SPOTLIGHT SEARCH «</span>
   </div>
 
-  <!-- Hero Branding -->
-  <div class="hero">
-    <div class="hero-flex">
-      <div>
-        <p class="pixel-title">Bookmarks</p>
-        <p class="subtitle">a lil scrapbook for your <b>favorite corners</b> of the internet.</p>
+  <!-- Navigation -->
+  <header class="landing-nav">
+    <a href="/" class="landing-logo">
+      <span class="pixel-title" style="font-size: 20px; margin: 0;">Bookmarks</span>
+    </a>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <a href="https://github.com/codewithabhiishek" target="_blank" rel="noreferrer" class="btn-retro" style="text-decoration: none;">[GITHUB ↗]</a>
+      <a href="/app.html" class="btn-retro" style="text-decoration: none; background: var(--green); color: #0a0a0a; font-weight: 700;">[▶ LAUNCH APP]</a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-box">
+    <div class="hero-tagline">» ZERO LOGINS · LOCAL-FIRST · ZERO ADS «</div>
+    <h1 class="hero-h1">YOUR CORNER OF THE INTERNET, SCRAPBOOKED.</h1>
+    <p class="hero-sub">
+      A lightning-fast visual bookmark vault for the tools, reads, and rabbit holes you actually use every day. Open tabs die; this page doesn't.
+    </p>
+
+    <div class="cta-row">
+      <a href="/app.html" class="btn-main-cta">
+        ▶ LAUNCH SCRAPBOOK NOW
+      </a>
+      <a href="#features" class="btn-sec-cta">
+        [ FEATURES & SPECS ]
+      </a>
+    </div>
+
+    <div class="trust-strip">
+      <div class="trust-item">
+        <span class="icon">✔</span>
+        <span>100% Free Forever</span>
       </div>
-      <div class="hero-buttons">
-        <button id="btn-sync-trigger" class="btn-retro btn-retro-sync" title="Manage Cloud Sync">[☁️ SYNC: LOCAL]</button>
-        <button id="btn-add-category-trigger" class="btn-retro">[+ ADD CATEGORY]</button>
-        <button id="btn-add-trigger" class="btn-retro">[+ ADD LINK]</button>
+      <div class="trust-item">
+        <span class="icon">✔</span>
+        <span>Local-First by Default</span>
+      </div>
+      <div class="trust-item">
+        <span class="icon">✔</span>
+        <span>Instant Keyboard Search (/)</span>
+      </div>
+      <div class="trust-item">
+        <span class="icon">✔</span>
+        <span>Zero Analytics or Tracking</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Pinned / Starred stickers row -->
-  <p class="section-tag">★ pinned</p>
-  <div class="pin-strip" id="pin-strip">
-    <!-- Pinned stickers loaded dynamically by app.js -->
-  </div>
+  <!-- Live Mockup Showcase -->
+  <section class="mockup-card">
+    <div class="mockup-header">
+      <div class="mockup-dots">
+        <div class="mockup-dot" style="background: var(--pink);"></div>
+        <div class="mockup-dot" style="background: var(--amber);"></div>
+        <div class="mockup-dot" style="background: var(--green);"></div>
+      </div>
+      <span style="font-size: 11px; color: var(--green); font-weight: 700;">abhishek@scrapbook:~$ bookmarks --live</span>
+      <span style="font-size: 10px; color: var(--muted); border: 1px solid var(--border); padding: 2px 8px; border-radius: 3px;">SHORTCUT: [/]</span>
+    </div>
 
-  <!-- All categories layout board -->
-  <p class="section-tag" style="background:var(--green); color:var(--bg);">all categories</p>
-  <div class="board" id="categories-board">
-    <!-- Category card nodes loaded dynamically by app.js -->
-  </div>
+    <div class="grid-preview">
+      <!-- Dev Category -->
+      <div class="preview-cat">
+        <div class="preview-cat-title">
+          <span>⚡ DEV & TOOLS</span>
+          <span style="color: var(--pink);">[4]</span>
+        </div>
+        <div class="preview-link-row">
+          <span>🛠️</span>
+          <span style="font-weight: 700; color: var(--green);">GitHub</span>
+          <span style="color: var(--muted); font-size: 10px; margin-left: auto;">github.com</span>
+        </div>
+        <div class="preview-link-row">
+          <span>▲</span>
+          <span style="font-weight: 700; color: var(--green);">Vercel Dashboard</span>
+          <span style="color: var(--muted); font-size: 10px; margin-left: auto;">vercel.com</span>
+        </div>
+        <div class="preview-link-row">
+          <span>🎨</span>
+          <span style="font-weight: 700; color: var(--green);">Tailwind CSS</span>
+          <span style="color: var(--muted); font-size: 10px; margin-left: auto;">tailwindcss.com</span>
+        </div>
+      </div>
 
-  <p class="footer-line">press / anywhere to search • click any chip to open • double-click category title to rename</p>
+      <!-- Reads Category -->
+      <div class="preview-cat">
+        <div class="preview-cat-title">
+          <span>📖 READS & INSPIRATION</span>
+          <span style="color: var(--pink);">[3]</span>
+        </div>
+        <div class="preview-link-row">
+          <span>📰</span>
+          <span style="font-weight: 700; color: var(--green);">Hacker News</span>
+          <span style="color: var(--muted); font-size: 10px; margin-left: auto;">news.ycombinator.com</span>
+        </div>
+        <div class="preview-link-row">
+          <span>✨</span>
+          <span style="font-weight: 700; color: var(--green);">Godly Website Design</span>
+          <span style="color: var(--muted); font-size: 10px; margin-left: auto;">godly.website</span>
+        </div>
+        <div class="preview-link-row">
+          <span>⚡</span>
+          <span style="font-weight: 700; color: var(--green);">Frontend Masters</span>
+          <span style="color: var(--muted); font-size: 10px; margin-left: auto;">frontendmasters.com</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Features Grid -->
+  <section id="features">
+    <p style="font-family: 'Press Start 2P', monospace; font-size: 16px; color: var(--green); text-shadow: 2px 2px 0 var(--pink); margin-bottom: 24px; text-align: center;">
+      [ SYSTEM CAPABILITIES ]
+    </p>
+
+    <div class="features-grid">
+      <div class="feat-card">
+        <p class="feat-tag">01 // PRIVACY</p>
+        <h3 class="feat-title">LOCAL-FIRST STORAGE</h3>
+        <p class="feat-desc">Your links live in your browser's localStorage. Zero accounts required, zero tracking cookies, zero cloud dependencies.</p>
+      </div>
+
+      <div class="feat-card">
+        <p class="feat-tag">02 // CLOUD SYNC</p>
+        <h3 class="feat-title">128-BIT PASSKEYS</h3>
+        <p class="feat-desc">Optional encrypted cloud backup across your laptop, phone, and tablet using high-entropy private passkeys.</p>
+      </div>
+
+      <div class="feat-card">
+        <p class="feat-tag">03 // SPEED</p>
+        <h3 class="feat-title">SPOTLIGHT SEARCH</h3>
+        <p class="feat-desc">Hit <code>/</code> anywhere on the page for an instant command-palette fuzzy search with arrow-key keyboard navigation.</p>
+      </div>
+
+      <div class="feat-card">
+        <p class="feat-tag">04 // ASSETS</p>
+        <h3 class="feat-title">SMART FAVICONS</h3>
+        <p class="feat-desc">Multi-tier favicon extraction pipeline with automated fallbacks to high-res icons and retro monogram badges.</p>
+      </div>
+
+      <div class="feat-card">
+        <p class="feat-tag">05 // WORKFLOW</p>
+        <h3 class="feat-title">PINNED STICKERS</h3>
+        <p class="feat-desc">Pin your most-visited websites to a prominent top sticker bar for instant 1-click access every morning.</p>
+      </div>
+
+      <div class="feat-card">
+        <p class="feat-tag">06 // FREEDOM</p>
+        <h3 class="feat-title">100% FREE FOREVER</h3>
+        <p class="feat-desc">No subscription tiers, no feature lockouts, no paywalls. Built for developers and daily internet surfers.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 Quick Steps -->
+  <section class="steps-section">
+    <h2 style="font-family: 'Press Start 2P', monospace; font-size: 16px; color: var(--green); text-shadow: 2px 2px 0 var(--pink);">
+      READY IN 10 SECONDS
+    </h2>
+    <p style="font-size: 13px; color: var(--muted); margin-top: 8px;">No setup, no email confirmation, no friction.</p>
+
+    <div class="steps-grid">
+      <div class="step-box">
+        <div class="step-num">01</div>
+        <h4 style="color: var(--green); margin-bottom: 6px; font-size: 13px;">OPEN THE APP</h4>
+        <p style="font-size: 12px; color: #cdf7c4; opacity: 0.8;">Click launch. Your local scrapbook initializes instantly in your browser.</p>
+      </div>
+      <div class="step-box">
+        <div class="step-num">02</div>
+        <h4 style="color: var(--green); margin-bottom: 6px; font-size: 13px;">ADD YOUR LINKS</h4>
+        <p style="font-size: 12px; color: #cdf7c4; opacity: 0.8;">Paste URLs, organize by custom color categories, and pin your daily favorites.</p>
+      </div>
+      <div class="step-box">
+        <div class="step-num">03</div>
+        <h4 style="color: var(--green); margin-bottom: 6px; font-size: 13px;">SYNC IF NEEDED</h4>
+        <p style="font-size: 12px; color: #cdf7c4; opacity: 0.8;">Generate a 1-click private key to sync across your phone or work computer.</p>
+      </div>
+    </div>
+
+    <div style="margin-top: 32px;">
+      <a href="/app.html" class="btn-main-cta">
+        ▶ ENTER BOOKMARK MANAGER →
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <div>
+      <span style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--green);">Bookmarks</span>
+      <span style="margin-left: 8px;">· Built by Abhishek © 2026</span>
+    </div>
+    <div style="display: flex; gap: 16px;">
+      <a href="/app.html">Launch App</a>
+      <a href="https://github.com/codewithabhiishek" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="#top" onclick="window.scrollTo({top:0, behavior:'smooth'}); return false;">Top ↑</a>
+    </div>
+  </footer>
+
 </div>
-
-<!-- Add Bookmark Modal Dialog -->
-<dialog id="add-bookmark-dialog">
-  <div class="dialog-header">
-    <h3>:: ADD NEW LINK ::</h3>
-    <button class="btn-retro-close" id="btn-close-add" aria-label="Close dialog">[X]</button>
-  </div>
-  <form id="add-bookmark-form" method="dialog">
-    <div class="dialog-body">
-      <div class="form-group">
-        <label for="bookmark-url">> URL:</label>
-        <input type="url" id="bookmark-url" class="form-control" placeholder="https://example.com" required autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label for="bookmark-title">> TITLE:</label>
-        <input type="text" id="bookmark-title" class="form-control" placeholder="Optional Title" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label for="bookmark-category">> CATEGORY:</label>
-        <select id="bookmark-category" class="form-control" required>
-          <option value="dev">dev-tools/</option>
-          <option value="design">design-frontend/</option>
-          <option value="learning">learning/</option>
-          <option value="freelance">freelance-tools/</option>
-          <option value="personal">personal/</option>
-        </select>
-      </div>
-    </div>
-    <div class="dialog-footer">
-      <button type="button" class="btn-retro-secondary" id="btn-cancel-add">[ CANCEL ]</button>
-      <button type="submit" class="btn-retro-primary" id="btn-submit-add">[ SUBMIT ]</button>
-    </div>
-  </form>
-</dialog>
-
-<!-- Add Category Modal Dialog -->
-<dialog id="add-category-dialog">
-  <div class="dialog-header">
-    <h3>:: CREATE NEW CATEGORY ::</h3>
-    <button class="btn-retro-close" id="btn-close-add-cat" type="button" aria-label="Close dialog">[X]</button>
-  </div>
-  <form id="add-category-form" method="dialog">
-    <div class="dialog-body">
-      <div class="form-group">
-        <label for="add-category-name">> CATEGORY NAME:</label>
-        <input type="text" id="add-category-name" class="form-control" placeholder="e.g. Work" required autocomplete="off">
-      </div>
-    </div>
-    <div class="dialog-footer">
-      <button type="button" class="btn-retro-secondary" id="btn-cancel-add-cat">[ CANCEL ]</button>
-      <button type="submit" class="btn-retro-primary" id="btn-submit-add-cat">[ CREATE ]</button>
-    </div>
-  </form>
-</dialog>
-
-<!-- Edit Bookmark Modal Dialog -->
-<dialog id="edit-bookmark-dialog">
-  <div class="dialog-header">
-    <h3>:: EDIT LINK ::</h3>
-    <button class="btn-retro-close" id="btn-close-edit" type="button" aria-label="Close dialog">[X]</button>
-  </div>
-  <form id="edit-bookmark-form" method="dialog">
-    <input type="hidden" id="edit-bookmark-id">
-    <div class="dialog-body">
-      <div class="form-group">
-        <label for="edit-bookmark-url">> URL:</label>
-        <input type="url" id="edit-bookmark-url" class="form-control" placeholder="https://example.com" required autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label for="edit-bookmark-title">> TITLE:</label>
-        <input type="text" id="edit-bookmark-title" class="form-control" placeholder="Optional Title" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label for="edit-bookmark-category">> CATEGORY:</label>
-        <select id="edit-bookmark-category" class="form-control" required>
-          <!-- Synced dynamically by app.js -->
-        </select>
-      </div>
-    </div>
-    <div class="dialog-footer">
-      <button type="button" class="btn-retro-secondary" id="btn-cancel-edit">[ CANCEL ]</button>
-      <button type="submit" class="btn-retro-primary" id="btn-submit-edit">[ SAVE ]</button>
-    </div>
-  </form>
-</dialog>
-
-<!-- Edit Category Modal Dialog -->
-<dialog id="edit-category-dialog">
-  <div class="dialog-header">
-    <h3>:: RENAME CATEGORY ::</h3>
-    <button class="btn-retro-close" id="btn-close-edit-cat" type="button" aria-label="Close dialog">[X]</button>
-  </div>
-  <form id="edit-category-form" method="dialog">
-    <input type="hidden" id="edit-category-key">
-    <div class="dialog-body">
-      <div class="form-group">
-        <label for="edit-category-name">> CATEGORY NAME:</label>
-        <input type="text" id="edit-category-name" class="form-control" placeholder="e.g. Design" required autocomplete="off">
-      </div>
-    </div>
-    <div class="dialog-footer">
-      <button type="button" class="btn-retro-secondary" id="btn-cancel-edit-cat">[ CANCEL ]</button>
-      <button type="submit" class="btn-retro-primary" id="btn-submit-edit-cat">[ SAVE ]</button>
-    </div>
-  </form>
-</dialog>
-
-<!-- Cloud Sync Modal Dialog -->
-<dialog id="sync-dialog">
-  <div class="dialog-header">
-    <h3>:: CLOUD SYNC & PRIVACY ::</h3>
-    <button class="btn-retro-close" id="btn-close-sync" type="button" aria-label="Close dialog">[X]</button>
-  </div>
-  <div class="dialog-body sync-dialog-body">
-    <div class="sync-status-box" id="sync-status-box">
-      <span class="sync-status-indicator" id="sync-status-indicator">●</span>
-      <span id="sync-status-label">Status: Local Storage Only (Offline)</span>
-    </div>
-    
-    <div class="sync-card" id="sync-active-card">
-      <label class="sync-label">> ACTIVE SYNC KEY:</label>
-      <div class="sync-key-display-group">
-        <input type="text" id="sync-active-key" class="form-control mono-font" readonly placeholder="No sync key linked" autocomplete="off">
-        <button type="button" id="btn-copy-sync-key" class="btn-retro-secondary" title="Copy Key to Clipboard">[ COPY ]</button>
-      </div>
-      <p class="sync-hint">Keep this key private! Paste this exact key on your phone or other computers to sync your links seamlessly.</p>
-    </div>
-
-    <div class="sync-divider"><span>OR MANAGE KEYS</span></div>
-
-    <div class="sync-actions-group">
-      <button type="button" class="btn-retro-primary w-100" id="btn-generate-sync-key">
-        [ ⚡ GENERATE NEW SECURE KEY ]
-      </button>
-      <p class="sync-subhint">Creates an unguessable private key and saves your current bookmarks to your personal cloud locker.</p>
-    </div>
-
-    <div class="sync-form-group">
-      <label for="sync-input-key" class="sync-label">> LINK EXISTING KEY (PHONE / OTHER PC):</label>
-      <div class="sync-input-row">
-        <input type="text" id="sync-input-key" class="form-control" placeholder="Paste your sync key here..." autocomplete="off">
-        <button type="button" class="btn-retro-primary" id="btn-connect-sync-key">[ CONNECT ]</button>
-      </div>
-    </div>
-
-    <div class="sync-footer-actions">
-      <button type="button" class="btn-retro-danger" id="btn-disconnect-sync">[ DISCONNECT (SWITCH TO LOCAL ONLY) ]</button>
-    </div>
-  </div>
-</dialog>
-
-<!-- Search Command Palette Dialog (Retro Terminal Theme) -->
-<dialog id="search-dialog">
-  <div class="search-dialog-container">
-    <div class="search-input-wrapper">
-      <span class="search-prompt">> </span>
-      <input type="text" id="search-input" class="search-input-field" placeholder="search links by name/url..." aria-label="Search bookmarks" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <span class="search-escape-hint">[ESC]</span>
-    </div>
-    <div class="search-results-list" id="search-results">
-      <!-- Search result items generated by app.js -->
-    </div>
-  </div>
-</dialog>
-
-<!-- Toast Notification Container -->
-<div class="toast-container" id="toast-container"></div>
-
-<script src="app.js" type="module"></script>
 </body>
 </html>
