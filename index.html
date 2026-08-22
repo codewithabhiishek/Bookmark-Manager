@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    // Instant bypass for returning users: if user already visited or stored bookmarks, jump straight to the app without flashing the landing page.
+    (function() {
+      try {
+        var urlParams = new URLSearchParams(window.location.search);
+        var forceLanding = urlParams.get('landing') === 'true' || urlParams.get('landing') === '1' || window.location.hash === '#landing';
+        if (!forceLanding) {
+          var hasVisited = localStorage.getItem('zenmark_has_visited') === 'true';
+          var hasBookmarks = !!localStorage.getItem('zenmark_bookmarks_v4');
+          var hasSyncKey = !!localStorage.getItem('zenmark_sync_key');
+          if (hasVisited || hasBookmarks || hasSyncKey) {
+            window.location.replace('/app.html');
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bookmarks — The Retro Web Scrapbook</title>

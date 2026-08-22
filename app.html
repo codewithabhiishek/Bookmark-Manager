@@ -11,6 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>
+    try {
+      localStorage.setItem('zenmark_has_visited', 'true');
+    } catch (e) {}
+
     window.handleFaviconError = function(img) {
       if (!img) return;
       const host = img.getAttribute('data-host') || '';
@@ -62,7 +66,7 @@
         <p class="subtitle">a lil scrapbook for your <b>favorite corners</b> of the internet.</p>
       </div>
       <div class="hero-buttons">
-        <a href="/" class="btn-retro" style="text-decoration:none; display:inline-flex; align-items:center;">[ℹ️ ABOUT]</a>
+        <a href="/?landing=true" class="btn-retro" style="text-decoration:none; display:inline-flex; align-items:center;" title="View Landing / About Page">[ℹ️ ABOUT]</a>
         <button id="btn-sync-trigger" class="btn-retro btn-retro-sync" title="Manage Cloud Sync">[☁️ SYNC: LOCAL]</button>
         <button id="btn-add-category-trigger" class="btn-retro">[+ ADD CATEGORY]</button>
         <button id="btn-add-trigger" class="btn-retro">[+ ADD LINK]</button>

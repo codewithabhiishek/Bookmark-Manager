@@ -121,6 +121,10 @@ function escapeHTML(str) {
 }
 
 // Application State
+try {
+  localStorage.setItem('zenmark_has_visited', 'true');
+} catch (e) {}
+
 let bookmarks = defaultBookmarks;
 let syncKey = localStorage.getItem('zenmark_sync_key') || '';
 
