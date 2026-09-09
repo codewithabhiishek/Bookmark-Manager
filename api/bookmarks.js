@@ -2,13 +2,63 @@ export const config = {
   runtime: 'edge',
 };
 
+// In-memory sliding window rate limiter for Edge instances
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 60; // Max 60 requests per minute per IP
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+
+  if (now > record.resetAt) {
+    record.count = 1;
+    record.resetAt = now + RATE_LIMIT_WINDOW_MS;
+  } else {
+    record.count++;
+  }
+  rateLimitMap.set(ip, record);
+
+  // Periodic cleanup to avoid memory leaks
+  if (rateLimitMap.size > 2000) {
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (now > value.resetAt) rateLimitMap.delete(key);
+    }
+  }
+
+  return record.count > MAX_REQUESTS_PER_WINDOW;
+}
+
+function resolveAllowedOrigin(req) {
+  const origin = req.headers.get('origin');
+  if (!origin) return '*'; // Same-origin or direct browser request
+
+  try {
+    const { hostname } = new URL(origin);
+    const hostHeader = req.headers.get('host') || '';
+    const reqHostname = hostHeader.split(':')[0];
+
+    if (
+      hostname === reqHostname ||
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.endsWith('.vercel.app') ||
+      hostname.endsWith('.is-a.dev')
+    ) {
+      return origin;
+    }
+  } catch {}
+
+  return 'null';
+}
+
 export default async function handler(req) {
   const url = process.env.KV_REST_API_URL;
   const token = process.env.KV_REST_API_TOKEN;
 
-  // Set CORS headers
+  const allowedOrigin = resolveAllowedOrigin(req);
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, x-sync-key',
     'Content-Type': 'application/json'
@@ -16,6 +66,24 @@ export default async function handler(req) {
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers });
+  }
+
+  // IP Rate Limiting check
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+                   req.headers.get('x-real-ip') ||
+                   'unknown-client';
+
+  if (isRateLimited(clientIp)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests. Please slow down and try again in a minute." }),
+      {
+        status: 429,
+        headers: {
+          ...headers,
+          'Retry-After': '60'
+        }
+      }
+    );
   }
 
   if (!url || !token) {
@@ -97,6 +165,29 @@ export default async function handler(req) {
           JSON.stringify({ error: "Payload too large: Maximum 5000 bookmarks allowed." }),
           { status: 413, headers }
         );
+      }
+
+      // Schema validation on bookmark items
+      for (let i = 0; i < payload.bookmarks.length; i++) {
+        const item = payload.bookmarks[i];
+        if (!item || typeof item !== 'object') {
+          return new Response(
+            JSON.stringify({ error: `Invalid bookmark at index ${i}: Must be an object.` }),
+            { status: 400, headers }
+          );
+        }
+        if (typeof item.url !== 'string' || item.url.length > 2048) {
+          return new Response(
+            JSON.stringify({ error: `Invalid bookmark URL at index ${i}.` }),
+            { status: 400, headers }
+          );
+        }
+        if (typeof item.title !== 'string' || item.title.length > 300) {
+          return new Response(
+            JSON.stringify({ error: `Invalid bookmark title at index ${i}.` }),
+            { status: 400, headers }
+          );
+        }
       }
 
       const serializedPayload = JSON.stringify(payload);

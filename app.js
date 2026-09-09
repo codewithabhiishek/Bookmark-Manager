@@ -120,6 +120,36 @@ function escapeHTML(str) {
   );
 }
 
+// URL Protocol Safety Sanitizer (Blocks javascript:, data:, vbscript: XSS vectors)
+function isSafeUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
+    return false;
+  }
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:';
+  } catch {
+    return false;
+  }
+}
+
+function sanitizeUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '#';
+  const trimmed = rawUrl.trim();
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
+    return '#';
+  }
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+      return trimmed;
+    }
+  } catch {}
+  return '#';
+}
+
 // Application State
 try {
   localStorage.setItem('zenmark_has_visited', 'true');
@@ -318,7 +348,7 @@ function init() {
       b.url.toLowerCase().includes(query)
     );
     
-    if (match) {
+    if (match && isSafeUrl(match.url)) {
       isRedirecting = true;
       window.location.replace(match.url);
     }
@@ -327,7 +357,8 @@ function init() {
   if (!isRedirecting) {
     if (addParam === 'true' && urlParam) {
       openAddModal();
-      document.getElementById('bookmark-url').value = urlParam;
+      const safeUrlParam = sanitizeUrl(urlParam);
+      document.getElementById('bookmark-url').value = safeUrlParam !== '#' ? safeUrlParam : '';
       if (titleParam) {
         document.getElementById('bookmark-title').value = titleParam;
       }
@@ -378,7 +409,7 @@ function renderPinnedStickers() {
   pinnedList.slice(0, 10).forEach(bookmark => {
     const glyph = getGlyphForDomain(bookmark.url);
     const sticker = document.createElement('a');
-    sticker.href = bookmark.url;
+    sticker.href = sanitizeUrl(bookmark.url);
     sticker.target = '_blank';
     sticker.rel = 'noopener noreferrer';
     sticker.className = 'sticker';
@@ -398,7 +429,7 @@ function renderPinnedStickers() {
       <span class="pin-badge">★</span>
       <div class="glyph">
         ${iconUrl ? `
-          <img class="domain-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" data-host="${escapeHTML(host)}" data-origin="${escapeHTML(origin)}" alt=""${isProjectIcon ? '' : ' onerror="window.handleFaviconError(this)"'}>
+          <img class="domain-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(sanitizeUrl(bookmark.url))}" data-host="${escapeHTML(host)}" data-origin="${escapeHTML(origin)}" alt=""${isProjectIcon ? '' : ' onerror="window.handleFaviconError(this)"'}>
           <span class="domain-icon-fallback" style="display:none;">${glyph}</span>
         ` : `<span class="domain-icon-fallback" style="display:inline-flex;">${glyph}</span>`}
       </div>
@@ -463,9 +494,9 @@ function renderCategoryCards() {
         
         const glyph = getGlyphForDomain(bookmark.url);
         chipWrap.innerHTML = `
-          <a href="${escapeHTML(bookmark.url)}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${escapeHTML(bookmark.url)}">
+          <a href="${escapeHTML(sanitizeUrl(bookmark.url))}" target="_blank" rel="noopener noreferrer" class="chip ${bookmark.pinned ? 'starred' : ''}" title="${escapeHTML(bookmark.url)}">
             ${iconUrl ? `
-              <img class="chip-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(bookmark.url)}" data-host="${escapeHTML(host)}" data-origin="${escapeHTML(origin)}" alt=""${isProjectIcon ? '' : ' onerror="window.handleFaviconError(this)"'}>
+              <img class="chip-icon" src="${iconUrl}" loading="lazy" decoding="async" data-url="${escapeHTML(sanitizeUrl(bookmark.url))}" data-host="${escapeHTML(host)}" data-origin="${escapeHTML(origin)}" alt=""${isProjectIcon ? '' : ' onerror="window.handleFaviconError(this)"'}>
               <span class="domain-icon-fallback" style="display:none; font-size:10px;">${glyph}</span>
             ` : `<span class="domain-icon-fallback" style="display:inline-flex; font-size:10px;">${glyph}</span>`}
             <span>${escapeHTML(bookmark.title)}</span>
@@ -911,12 +942,14 @@ async function syncFromCloud() {
       const data = await res.json();
       
       if (data && data.bookmarks && data.categories) {
-        let newBookmarks = data.bookmarks;
-        newBookmarks.forEach((b, index) => {
-          if (typeof b.sortIndex !== 'number') {
-            b.sortIndex = index;
-          }
-        });
+        let newBookmarks = (data.bookmarks || [])
+          .filter(b => b && typeof b === 'object' && typeof b.url === 'string')
+          .map((b, index) => ({
+            ...b,
+            url: sanitizeUrl(b.url),
+            title: typeof b.title === 'string' ? b.title : '',
+            sortIndex: typeof b.sortIndex === 'number' ? b.sortIndex : index
+          }));
         newBookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
         
         const currentBookmarksStr = JSON.stringify(bookmarks);
@@ -1059,6 +1092,11 @@ function handleEditBookmarkSubmit(e) {
   
   if (!url) return;
   
+  if (/^(javascript|data|vbscript):/i.test(url)) {
+    showToast('❌ Dangerous URL scheme is not allowed.', 3000);
+    return;
+  }
+
   // Prepend protocol if missing
   if (!/^https?:\/\//i.test(url)) {
     if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
@@ -1066,6 +1104,11 @@ function handleEditBookmarkSubmit(e) {
     } else {
       url = 'https://' + url;
     }
+  }
+
+  if (!isSafeUrl(url)) {
+    showToast('❌ Invalid URL format.', 3000);
+    return;
   }
   
   if (!title) {
@@ -1101,6 +1144,11 @@ function handleAddBookmarkSubmit(e) {
   
   if (!url) return;
   
+  if (/^(javascript|data|vbscript):/i.test(url)) {
+    showToast('❌ Dangerous URL scheme is not allowed.', 3000);
+    return;
+  }
+
   // Prepend protocol if missing
   if (!/^https?:\/\//i.test(url)) {
     if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
@@ -1108,6 +1156,11 @@ function handleAddBookmarkSubmit(e) {
     } else {
       url = 'https://' + url;
     }
+  }
+
+  if (!isSafeUrl(url)) {
+    showToast('❌ Invalid URL format.', 3000);
+    return;
   }
   
   if (!title) {
@@ -1239,8 +1292,9 @@ function handleSearchInput() {
   }
   
   filteredSearchResults.forEach((result, idx) => {
+    const safeUrl = sanitizeUrl(result.url);
     const item = document.createElement('a');
-    item.href = result.url;
+    item.href = safeUrl;
     item.target = '_blank';
     item.rel = 'noopener noreferrer';
     item.className = 'search-result-item';
@@ -1253,7 +1307,7 @@ function handleSearchInput() {
       </div>
       <div class="search-result-actions">
         <span class="search-result-category">${categories[result.category]}</span>
-        <button class="btn-search-copy" title="Copy URL" data-url="${result.url}">[COPY]</button>
+        <button class="btn-search-copy" title="Copy URL" data-url="${escapeHTML(safeUrl)}">[COPY]</button>
       </div>
     `;
     
