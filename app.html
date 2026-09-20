@@ -96,14 +96,17 @@
     <button class="btn-retro-close" id="btn-close-add" aria-label="Close dialog">[X]</button>
   </div>
   <form id="add-bookmark-form" method="dialog">
+    <!-- Strix Defensive Honeypot Fields -->
+    <input type="checkbox" name="botcheck" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
+    <input type="text" name="_gotcha" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
     <div class="dialog-body">
       <div class="form-group">
         <label for="bookmark-url">> URL:</label>
-        <input type="url" id="bookmark-url" class="form-control" placeholder="https://example.com" required autocomplete="off">
+        <input type="url" id="bookmark-url" class="form-control" placeholder="https://example.com" maxlength="2048" required autocomplete="off">
       </div>
       <div class="form-group">
         <label for="bookmark-title">> TITLE:</label>
-        <input type="text" id="bookmark-title" class="form-control" placeholder="Optional Title" autocomplete="off">
+        <input type="text" id="bookmark-title" class="form-control" placeholder="Optional Title" maxlength="300" autocomplete="off">
       </div>
       <div class="form-group">
         <label for="bookmark-category">> CATEGORY:</label>
@@ -130,10 +133,13 @@
     <button class="btn-retro-close" id="btn-close-add-cat" type="button" aria-label="Close dialog">[X]</button>
   </div>
   <form id="add-category-form" method="dialog">
+    <!-- Strix Defensive Honeypot Fields -->
+    <input type="checkbox" name="botcheck" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
+    <input type="text" name="_gotcha" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
     <div class="dialog-body">
       <div class="form-group">
         <label for="add-category-name">> CATEGORY NAME:</label>
-        <input type="text" id="add-category-name" class="form-control" placeholder="e.g. Work" required autocomplete="off">
+        <input type="text" id="add-category-name" class="form-control" placeholder="e.g. Work" maxlength="50" required autocomplete="off">
       </div>
     </div>
     <div class="dialog-footer">
@@ -151,14 +157,17 @@
   </div>
   <form id="edit-bookmark-form" method="dialog">
     <input type="hidden" id="edit-bookmark-id">
+    <!-- Strix Defensive Honeypot Fields -->
+    <input type="checkbox" name="botcheck" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
+    <input type="text" name="_gotcha" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
     <div class="dialog-body">
       <div class="form-group">
         <label for="edit-bookmark-url">> URL:</label>
-        <input type="url" id="edit-bookmark-url" class="form-control" placeholder="https://example.com" required autocomplete="off">
+        <input type="url" id="edit-bookmark-url" class="form-control" placeholder="https://example.com" maxlength="2048" required autocomplete="off">
       </div>
       <div class="form-group">
         <label for="edit-bookmark-title">> TITLE:</label>
-        <input type="text" id="edit-bookmark-title" class="form-control" placeholder="Optional Title" autocomplete="off">
+        <input type="text" id="edit-bookmark-title" class="form-control" placeholder="Optional Title" maxlength="300" autocomplete="off">
       </div>
       <div class="form-group">
         <label for="edit-bookmark-category">> CATEGORY:</label>
@@ -182,10 +191,13 @@
   </div>
   <form id="edit-category-form" method="dialog">
     <input type="hidden" id="edit-category-key">
+    <!-- Strix Defensive Honeypot Fields -->
+    <input type="checkbox" name="botcheck" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
+    <input type="text" name="_gotcha" class="strix-botcheck-field" tabindex="-1" autocomplete="off">
     <div class="dialog-body">
       <div class="form-group">
         <label for="edit-category-name">> CATEGORY NAME:</label>
-        <input type="text" id="edit-category-name" class="form-control" placeholder="e.g. Design" required autocomplete="off">
+        <input type="text" id="edit-category-name" class="form-control" placeholder="e.g. Design" maxlength="50" required autocomplete="off">
       </div>
     </div>
     <div class="dialog-footer">
@@ -228,7 +240,7 @@
     <div class="sync-form-group">
       <label for="sync-input-key" class="sync-label">> LINK EXISTING KEY (PHONE / OTHER PC):</label>
       <div class="sync-input-row">
-        <input type="text" id="sync-input-key" class="form-control" placeholder="Paste your sync key here..." autocomplete="off">
+        <input type="text" id="sync-input-key" class="form-control" placeholder="Paste your sync key here..." maxlength="64" autocomplete="off">
         <button type="button" class="btn-retro-primary" id="btn-connect-sync-key">[ CONNECT ]</button>
       </div>
     </div>

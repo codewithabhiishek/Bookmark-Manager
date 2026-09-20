@@ -1,3 +1,27 @@
+import {
+  RETRO_COLOR_POOL,
+  FORBIDDEN_OBJECT_KEYS,
+  stripTags,
+  escapeHTML,
+  isSafeUrl,
+  sanitizeUrl,
+  formatBookmarkTitle,
+  formatCategoryName,
+  getCategoryColor,
+  generateSecureKey,
+  validateSyncKey,
+  getGlyphForDomain,
+  validateSyncPayload
+} from './bookmarkUtils.js';
+
+// Speed-Trap timing tracker to defend against automated script spam (< 1.8s)
+const modalOpenTimes = {
+  add: 0,
+  edit: 0,
+  addCat: 0,
+  editCat: 0
+};
+
 // Default bookmark seeds (Scrapbook theme matching user's template)
 const defaultBookmarks = [
   { id: '1', title: 'Gmail', url: 'https://mail.google.com', category: 'personal', pinned: false },
@@ -80,74 +104,6 @@ function getProjectIcon(host, origin) {
     return { iconUrl: origin ? `${origin}/favicon.ico` : '', isProjectIcon: false };
   }
   return { iconUrl: `https://icons.duckduckgo.com/ip3/${host}.ico`, isProjectIcon: false };
-}
-
-const retroColorPool = [
-  'var(--green)', // #39ff14 Neon Green
-  'var(--pink)',  // #ff0080 Neon Pink
-  'var(--amber)', // #ffb000 Neon Amber
-  'var(--cyan)',  // #23d5e0 Neon Cyan
-  '#c084fc',      // Neon Purple
-  '#f97316',      // Neon Orange
-  '#94a3b8',      // Retro Silver/Slate
-  '#3b82f6',      // Classic Tech Blue
-  '#f43f5e',      // Cyberpunk Rose Red
-  '#84cc16',      // Neon Lime
-  '#0d9488',      // Cyberpunk Teal
-  '#d946ef'       // Vivid Magenta
-];
-
-function getCategoryColor(catKey) {
-  let hash = 0;
-  for (let i = 0; i < catKey.length; i++) {
-    hash = catKey.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % retroColorPool.length;
-  return retroColorPool[index];
-}
-
-// XSS Sanitizer Utility
-function escapeHTML(str) {
-  if (!str) return '';
-  return String(str).replace(/[&<>'"]/g, 
-    tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag] || tag)
-  );
-}
-
-// URL Protocol Safety Sanitizer (Blocks javascript:, data:, vbscript: XSS vectors)
-function isSafeUrl(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== 'string') return false;
-  const trimmed = rawUrl.trim();
-  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
-    return false;
-  }
-  try {
-    const parsed = new URL(trimmed, window.location.origin);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:';
-  } catch {
-    return false;
-  }
-}
-
-function sanitizeUrl(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== 'string') return '#';
-  const trimmed = rawUrl.trim();
-  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
-    return '#';
-  }
-  try {
-    const parsed = new URL(trimmed, window.location.origin);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
-      return trimmed;
-    }
-  } catch {}
-  return '#';
 }
 
 // Application State
@@ -344,8 +300,8 @@ function init() {
     const query = qParam.toLowerCase().trim();
     // Search bookmarks for an exact title match or a partial URL hostname match
     const match = bookmarks.find(b => 
-      b.title.toLowerCase() === query || 
-      b.url.toLowerCase().includes(query)
+      (b && typeof b.title === 'string' && b.title.toLowerCase() === query) || 
+      (b && typeof b.url === 'string' && b.url.toLowerCase().includes(query))
     );
     
     if (match && isSafeUrl(match.url)) {
@@ -775,13 +731,6 @@ function syncCategoryDropdown() {
 }
 
 // ── Cloud Sync Management & Security ──────────────────────────────────────────
-function generateSecureKey() {
-  const bytes = new Uint8Array(10);
-  crypto.getRandomValues(bytes);
-  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
-  return `zen-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
-}
-
 function updateSyncUI() {
   if (syncKey) {
     if (btnSyncTrigger) {
@@ -942,20 +891,33 @@ async function syncFromCloud() {
       const data = await res.json();
       
       if (data && data.bookmarks && data.categories) {
+        const validation = validateSyncPayload(data);
+        if (!validation.valid) {
+          console.warn('[Sync] Received invalid data schema from cloud:', validation.error);
+          return;
+        }
+
         let newBookmarks = (data.bookmarks || [])
           .filter(b => b && typeof b === 'object' && typeof b.url === 'string')
           .map((b, index) => ({
             ...b,
             url: sanitizeUrl(b.url),
-            title: typeof b.title === 'string' ? b.title : '',
+            title: typeof b.title === 'string' ? formatBookmarkTitle(b.title) : '',
             sortIndex: typeof b.sortIndex === 'number' ? b.sortIndex : index
           }));
         newBookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
         
+        const cleanCategories = {};
+        for (const [k, v] of Object.entries(data.categories)) {
+          if (!FORBIDDEN_OBJECT_KEYS.includes(k.toLowerCase()) && typeof v === 'string') {
+            cleanCategories[k] = stripTags(v).slice(0, 50);
+          }
+        }
+
         const currentBookmarksStr = JSON.stringify(bookmarks);
         const newBookmarksStr = JSON.stringify(newBookmarks);
         const currentCategoriesStr = JSON.stringify(categories);
-        const newCategoriesStr = JSON.stringify(data.categories);
+        const newCategoriesStr = JSON.stringify(cleanCategories);
 
         if (currentBookmarksStr === newBookmarksStr && currentCategoriesStr === newCategoriesStr) {
           console.log('[Sync] Data is identical, skipping re-render.');
@@ -963,7 +925,7 @@ async function syncFromCloud() {
         }
 
         bookmarks = newBookmarks;
-        categories = data.categories;
+        categories = cleanCategories;
         
         localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
         localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
@@ -994,7 +956,7 @@ async function syncFromCloud() {
 function openEditCategoryModal(catKey) {
   const catName = categories[catKey];
   if (!catName) return;
-  
+  modalOpenTimes.editCat = Date.now();
   document.getElementById('edit-category-key').value = catKey;
   const cleanName = catName.endsWith('/') ? catName.slice(0, -1) : catName;
   document.getElementById('edit-category-name').value = cleanName;
@@ -1002,25 +964,28 @@ function openEditCategoryModal(catKey) {
   editCatDialog.showModal();
 }
 
-function formatCategoryName(name) {
-  if (!name) return '';
-  // Trim and remove trailing slashes/whitespace
-  let cleanName = name.trim().replace(/\/+$/, '').trim();
-  
-  // Capitalize first letter of each word (word boundaries separated by spaces, dashes, etc.)
-  cleanName = cleanName.replace(/\b\w+\b/g, (word) => {
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  });
-  
-  return cleanName + '/';
-}
-
 function handleEditCategorySubmit(e) {
   e.preventDefault();
+  // Honeypot check
+  const botcheck = editCatForm.querySelector('[name="botcheck"]')?.checked;
+  const gotcha = editCatForm.querySelector('[name="_gotcha"]')?.value;
+  if (botcheck || (gotcha && gotcha.trim().length > 0)) {
+    editCatDialog.close();
+    return;
+  }
+  // Speed-trap check
+  if (Date.now() - modalOpenTimes.editCat < 1800) {
+    showToast('⚠️ Too fast! Verification failed.', true);
+    return;
+  }
   const catKey = document.getElementById('edit-category-key').value;
   let newName = document.getElementById('edit-category-name').value.trim();
   
   if (!newName) return;
+  if (FORBIDDEN_OBJECT_KEYS.includes(catKey.toLowerCase()) || FORBIDDEN_OBJECT_KEYS.includes(newName.toLowerCase())) {
+    showToast('❌ Forbidden category name.', true);
+    return;
+  }
   
   newName = formatCategoryName(newName);
   
@@ -1036,13 +1001,31 @@ function handleEditCategorySubmit(e) {
 
 function openAddCategoryModal() {
   addCatForm.reset();
+  modalOpenTimes.addCat = Date.now();
   addCatDialog.showModal();
 }
 
 function handleAddCategorySubmit(e) {
   e.preventDefault();
+  // Honeypot check
+  const botcheck = addCatForm.querySelector('[name="botcheck"]')?.checked;
+  const gotcha = addCatForm.querySelector('[name="_gotcha"]')?.value;
+  if (botcheck || (gotcha && gotcha.trim().length > 0)) {
+    addCatDialog.close();
+    return;
+  }
+  // Speed-trap check
+  if (Date.now() - modalOpenTimes.addCat < 1800) {
+    showToast('⚠️ Too fast! Verification failed.', true);
+    return;
+  }
   let name = document.getElementById('add-category-name').value.trim();
   if (!name) return;
+
+  if (FORBIDDEN_OBJECT_KEYS.includes(name.toLowerCase())) {
+    showToast('❌ Forbidden category name.', true);
+    return;
+  }
 
   name = formatCategoryName(name);
 
@@ -1058,6 +1041,7 @@ function handleAddCategorySubmit(e) {
 
 function openAddModal(preSelectedCat = '') {
   addForm.reset();
+  modalOpenTimes.add = Date.now();
   if (preSelectedCat) {
     document.getElementById('bookmark-category').value = preSelectedCat;
   }
@@ -1067,7 +1051,7 @@ function openAddModal(preSelectedCat = '') {
 function openEditModal(id) {
   const b = bookmarks.find(x => x.id === id);
   if (!b) return;
-  
+  modalOpenTimes.edit = Date.now();
   editBookmarkId.value = b.id;
   editBookmarkUrl.value = b.url;
   editBookmarkTitle.value = b.title;
@@ -1076,29 +1060,34 @@ function openEditModal(id) {
   editDialog.showModal();
 }
 
-function formatBookmarkTitle(title) {
-  if (!title) return '';
-  return title.trim().replace(/\b\w+\b/g, (word) => {
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  });
-}
-
 function handleEditBookmarkSubmit(e) {
   e.preventDefault();
+  // Honeypot check
+  const botcheck = editForm.querySelector('[name="botcheck"]')?.checked;
+  const gotcha = editForm.querySelector('[name="_gotcha"]')?.value;
+  if (botcheck || (gotcha && gotcha.trim().length > 0)) {
+    editDialog.close();
+    return;
+  }
+  // Speed-trap check
+  if (Date.now() - modalOpenTimes.edit < 1800) {
+    showToast('⚠️ Too fast! Verification failed.', true);
+    return;
+  }
   const id = editBookmarkId.value;
-  let url = editBookmarkUrl.value.trim();
+  let url = editBookmarkUrl.value.trim().slice(0, 2048);
   let title = editBookmarkTitle.value.trim();
   let category = editBookmarkCategory.value;
   
   if (!url) return;
   
-  if (/^(javascript|data|vbscript):/i.test(url)) {
+  if (/^(javascript|data|vbscript|blob|file):/i.test(url)) {
     showToast('❌ Dangerous URL scheme is not allowed.', 3000);
     return;
   }
 
   // Prepend protocol if missing
-  if (!/^https?:\/\//i.test(url)) {
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('mailto:')) {
     if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
       url = 'http://' + url;
     } else {
@@ -1124,7 +1113,7 @@ function handleEditBookmarkSubmit(e) {
   
   const b = bookmarks.find(x => x.id === id);
   if (b) {
-    b.url = url;
+    b.url = sanitizeUrl(url);
     b.title = title;
     b.category = category;
     
@@ -1138,19 +1127,31 @@ function handleEditBookmarkSubmit(e) {
 
 function handleAddBookmarkSubmit(e) {
   e.preventDefault();
-  let url = document.getElementById('bookmark-url').value.trim();
+  // Honeypot check
+  const botcheck = addForm.querySelector('[name="botcheck"]')?.checked;
+  const gotcha = addForm.querySelector('[name="_gotcha"]')?.value;
+  if (botcheck || (gotcha && gotcha.trim().length > 0)) {
+    addDialog.close();
+    return;
+  }
+  // Speed-trap check
+  if (Date.now() - modalOpenTimes.add < 1800) {
+    showToast('⚠️ Too fast! Verification failed.', true);
+    return;
+  }
+  let url = document.getElementById('bookmark-url').value.trim().slice(0, 2048);
   let title = document.getElementById('bookmark-title').value.trim();
   let category = document.getElementById('bookmark-category').value;
   
   if (!url) return;
   
-  if (/^(javascript|data|vbscript):/i.test(url)) {
+  if (/^(javascript|data|vbscript|blob|file):/i.test(url)) {
     showToast('❌ Dangerous URL scheme is not allowed.', 3000);
     return;
   }
 
   // Prepend protocol if missing
-  if (!/^https?:\/\//i.test(url)) {
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('mailto:')) {
     if (url.startsWith('localhost') || url.startsWith('127.0.0.1')) {
       url = 'http://' + url;
     } else {
@@ -1177,7 +1178,7 @@ function handleAddBookmarkSubmit(e) {
   const newBookmark = {
     id: Date.now().toString(),
     title,
-    url,
+    url: sanitizeUrl(url),
     category,
     pinned: false,
     sortIndex: bookmarks.length
@@ -1306,7 +1307,7 @@ function handleSearchInput() {
         <span class="search-result-url">${escapeHTML(result.url)}</span>
       </div>
       <div class="search-result-actions">
-        <span class="search-result-category">${categories[result.category]}</span>
+        <span class="search-result-category">${escapeHTML(categories[result.category] || result.category || 'General/')}</span>
         <button class="btn-search-copy" title="Copy URL" data-url="${escapeHTML(safeUrl)}">[COPY]</button>
       </div>
     `;
@@ -1373,54 +1374,6 @@ function handleGlobalKeydown(e) {
   }
 }
 
-// Glyph lookup based on bookmark URL domains for sticker widgets
-function getGlyphForDomain(url) {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    if (host.includes('github')) return '⌥';
-    if (host.includes('vercel')) return '▲';
-    if (host.includes('supabase')) return '⚡';
-    if (host.includes('windsurf') || host.includes('codeium')) return '⌬';
-    if (host.includes('figma')) return '◆';
-    if (host.includes('google') || host.includes('gmail') || host.includes('mail.google')) return '✉';
-    if (host.includes('udemy')) return 'U';
-    if (host.includes('youtube')) return '▶';
-    if (host.includes('unstop')) return '⎋';
-    if (host.includes('chatgpt') || host.includes('openai')) return '💬';
-    if (host.includes('claude')) return '✿';
-    if (host.includes('firebase')) return '🔥';
-    if (host.includes('wooble')) return 'W';
-    if (host.includes('coolors')) return '🎨';
-    if (host.includes('dribbble')) return '🏀';
-    if (host.includes('neal.fun')) return '🎈';
-    if (host.includes('pointerpointer')) return '☞';
-    if (host.includes('radio.garden')) return '📻';
-    if (host.includes('asoftmurmur')) return '🌊';
-    if (host.includes('aurabuild')) return '⏏';
-    if (host.includes('web3forms')) return '▩';
-    if (host.includes('my-portfolio') || host.includes('portfolio')) return '>_';
-    if (host.includes('study-os') || host.includes('studyos') || host.includes('mystudy')) return '>_';
-    if (host.includes('skillsdirectory') || host.includes('skills')) return '⌘';
-    if (host.includes('free-for')) return '🆓';
-    if (host.includes('book-vault') || host.includes('bookvault')) return '🔒';
-    if (host.includes('fitarena')) return '⚡';
-    if (host.includes('college')) return '🎓';
-    if (host.includes('traffic')) return '🚥';
-    if (host.includes('ev-route') || host.includes('evroute')) return '⚡';
-    if (host.includes('cursor')) return '⌖';
-    if (host.includes('sudoku')) return '🧩';
-    if (host.includes('ice') || host.includes('water')) return '🧊';
-    if (host.includes('windows')) return '❖';
-    
-    // Extract first letter of domain clean name
-    const parts = host.replace(/^www\./, '').split('.');
-    const mainName = parts[0] || '';
-    return mainName ? mainName.charAt(0).toUpperCase() : '✦';
-  } catch (e) {
-    return '✦';
-  }
-}
-
 // Retro-style terminal warnings and notification alerts
 function showToast(message, isWarning = false) {
   const toast = document.createElement('div');
@@ -1431,7 +1384,7 @@ function showToast(message, isWarning = false) {
   }
   
   toast.innerHTML = `
-    <span>> ${message.toUpperCase()}</span>
+    <span>> ${escapeHTML(stripTags(message).toUpperCase())}</span>
   `;
   
   toastContainer.appendChild(toast);

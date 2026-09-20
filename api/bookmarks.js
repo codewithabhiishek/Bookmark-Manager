@@ -1,3 +1,5 @@
+import { validateSyncPayload, validateSyncKey } from '../bookmarkUtils.js';
+
 export const config = {
   runtime: 'edge',
 };
@@ -88,7 +90,7 @@ export default async function handler(req) {
 
   if (!url || !token) {
     return new Response(
-      JSON.stringify({ error: "Missing database environment variables." }),
+      JSON.stringify({ error: "Missing database configuration." }),
       {
         status: 500,
         headers
@@ -109,8 +111,7 @@ export default async function handler(req) {
   }
 
   // Validate key format: 8 to 64 alphanumeric characters, underscores, or hyphens
-  const validKeyRegex = /^[a-zA-Z0-9_-]{8,64}$/;
-  if (!validKeyRegex.test(syncKey)) {
+  if (!validateSyncKey(syncKey)) {
     return new Response(
       JSON.stringify({ error: "Invalid sync key format. Key must be 8-64 alphanumeric characters, dashes, or underscores." }),
       { status: 400, headers }
@@ -134,8 +135,9 @@ export default async function handler(req) {
       const payload = data.result ? JSON.parse(data.result) : null;
       return new Response(JSON.stringify(payload), { status: 200, headers });
     } catch (error) {
+      console.error('[KV Sync GET Error]', error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: "Database retrieval failed. Please try again later." }),
         { status: 500, headers }
       );
     }
@@ -145,49 +147,20 @@ export default async function handler(req) {
     try {
       const payload = await req.json();
 
-      // Payload validation
-      if (!payload || typeof payload !== 'object') {
+      // Strix defensive validation & prototype pollution defense
+      const validation = validateSyncPayload(payload);
+      if (!validation.valid) {
+        if (validation.isBot) {
+          // Silently discard bot submission with mock success
+          return new Response(
+            JSON.stringify({ success: true, mock: true }),
+            { status: 200, headers }
+          );
+        }
         return new Response(
-          JSON.stringify({ error: "Invalid payload: Expected an object." }),
+          JSON.stringify({ error: validation.error || "Invalid payload." }),
           { status: 400, headers }
         );
-      }
-
-      if (!Array.isArray(payload.bookmarks) || typeof payload.categories !== 'object' || payload.categories === null) {
-        return new Response(
-          JSON.stringify({ error: "Invalid payload structure: 'bookmarks' must be an array and 'categories' must be an object." }),
-          { status: 400, headers }
-        );
-      }
-
-      if (payload.bookmarks.length > 5000) {
-        return new Response(
-          JSON.stringify({ error: "Payload too large: Maximum 5000 bookmarks allowed." }),
-          { status: 413, headers }
-        );
-      }
-
-      // Schema validation on bookmark items
-      for (let i = 0; i < payload.bookmarks.length; i++) {
-        const item = payload.bookmarks[i];
-        if (!item || typeof item !== 'object') {
-          return new Response(
-            JSON.stringify({ error: `Invalid bookmark at index ${i}: Must be an object.` }),
-            { status: 400, headers }
-          );
-        }
-        if (typeof item.url !== 'string' || item.url.length > 2048) {
-          return new Response(
-            JSON.stringify({ error: `Invalid bookmark URL at index ${i}.` }),
-            { status: 400, headers }
-          );
-        }
-        if (typeof item.title !== 'string' || item.title.length > 300) {
-          return new Response(
-            JSON.stringify({ error: `Invalid bookmark title at index ${i}.` }),
-            { status: 400, headers }
-          );
-        }
       }
 
       const serializedPayload = JSON.stringify(payload);
@@ -212,8 +185,9 @@ export default async function handler(req) {
         { status: 200, headers }
       );
     } catch (error) {
+      console.error('[KV Sync POST Error]', error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: "Database storage failed. Please try again later." }),
         { status: 500, headers }
       );
     }
