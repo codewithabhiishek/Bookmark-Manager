@@ -49,7 +49,9 @@ function resolveAllowedOrigin(req) {
     ) {
       return origin;
     }
-  } catch {}
+  } catch (err) {
+    void err;
+  }
 
   return 'null';
 }

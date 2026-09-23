@@ -87,7 +87,9 @@ export function sanitizeUrl(rawUrl) {
     if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
       return stripped;
     }
-  } catch {}
+  } catch (err) {
+    void err;
+  }
   return '#';
 }
 

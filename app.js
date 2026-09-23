@@ -1,5 +1,4 @@
 import {
-  RETRO_COLOR_POOL,
   FORBIDDEN_OBJECT_KEYS,
   stripTags,
   escapeHTML,
@@ -109,7 +108,9 @@ function getProjectIcon(host, origin) {
 // Application State
 try {
   localStorage.setItem('zenmark_has_visited', 'true');
-} catch (e) {}
+} catch (err) {
+  void err;
+}
 
 let bookmarks = defaultBookmarks;
 let syncKey = localStorage.getItem('zenmark_sync_key') || '';
@@ -119,7 +120,7 @@ try {
   if (localBookmarks) {
     bookmarks = JSON.parse(localBookmarks);
   }
-} catch (e) {
+} catch {
   console.warn('Failed to parse bookmarks from localStorage, using defaults.');
 }
 
@@ -136,7 +137,7 @@ try {
   if (localCats) {
     savedCategories = JSON.parse(localCats);
   }
-} catch (e) {
+} catch {
   console.warn('Failed to parse categories from localStorage.');
 }
 
@@ -189,7 +190,6 @@ const btnSyncTrigger = document.getElementById('btn-sync-trigger');
 const syncDialog = document.getElementById('sync-dialog');
 const btnCloseSync = document.getElementById('btn-close-sync');
 const syncStatusBox = document.getElementById('sync-status-box');
-const syncStatusIndicator = document.getElementById('sync-status-indicator');
 const syncStatusLabel = document.getElementById('sync-status-label');
 const syncActiveKey = document.getElementById('sync-active-key');
 const btnCopySyncKey = document.getElementById('btn-copy-sync-key');
@@ -377,7 +377,9 @@ function renderPinnedStickers() {
       const parsed = new URL(bookmark.url);
       host = parsed.hostname;
       origin = parsed.origin;
-    } catch (e) {}
+    } catch (err) {
+      void err;
+    }
     
     const { iconUrl, isProjectIcon } = getProjectIcon(host, origin);
     
@@ -445,7 +447,9 @@ function renderCategoryCards() {
           const parsed = new URL(bookmark.url);
           host = parsed.hostname;
           origin = parsed.origin;
-        } catch (e) {}
+        } catch (err) {
+          void err;
+        }
         const { iconUrl, isProjectIcon } = getProjectIcon(host, origin);
         
         const glyph = getGlyphForDomain(bookmark.url);
@@ -554,7 +558,6 @@ function renderCategoryCards() {
                 renderAll();
                 playSound('success');
                 
-                const oldCatName = categories[oldCat] || oldCat;
                 const newCatName = categories[newCat] || newCat;
                 if (oldCat !== newCat) {
                   showToast(`Moved "${draggedBookmark.title}" to "${newCatName}"`);
@@ -571,12 +574,12 @@ function renderCategoryCards() {
     }
     
     // Bind Card Quick Add [+]
-    card.querySelector('.btn-card-add').addEventListener('click', (e) => {
+    card.querySelector('.btn-card-add').addEventListener('click', () => {
       openAddModal(catKey);
     });
     
     // Bind Card Rename [✎]
-    card.querySelector('.btn-card-edit-cat').addEventListener('click', (e) => {
+    card.querySelector('.btn-card-edit-cat').addEventListener('click', () => {
       openEditCategoryModal(catKey);
     });
 
@@ -589,7 +592,7 @@ function renderCategoryCards() {
     }
     
     // Bind Card Delete [✖]
-    card.querySelector('.btn-card-delete').addEventListener('click', (e) => {
+    card.querySelector('.btn-card-delete').addEventListener('click', () => {
       deleteCategory(catKey);
     });
 
@@ -791,7 +794,7 @@ async function handleGenerateNewSyncKey() {
   try {
     await navigator.clipboard.writeText(newKey);
     showToast('🔑 New Sync Key created & copied to clipboard!', 4000);
-  } catch (e) {
+  } catch {
     showToast('🔑 New Sync Key created: ' + newKey, 4000);
   }
 }
@@ -802,8 +805,7 @@ async function handleConnectSyncKey() {
     showToast('❌ Please enter a sync key.', 2500);
     return;
   }
-  const validKeyRegex = /^[a-zA-Z0-9_-]{8,64}$/;
-  if (!validKeyRegex.test(enteredKey)) {
+  if (!validateSyncKey(enteredKey)) {
     showToast('❌ Invalid format. Key must be 8-64 alphanumeric characters.', 3000);
     return;
   }
@@ -825,7 +827,7 @@ async function handleCopySyncKey() {
     await navigator.clipboard.writeText(syncKey);
     playSound('copy');
     showToast('📋 Sync Key copied to clipboard!', 2500);
-  } catch (e) {
+  } catch {
     showToast('📋 Key: ' + syncKey, 4000);
   }
 }
@@ -1104,7 +1106,7 @@ function handleEditBookmarkSubmit(e) {
     try {
       const hostname = new URL(url).hostname;
       title = hostname.replace('www.', '');
-    } catch (e) {
+    } catch {
       title = url;
     }
   }
@@ -1168,7 +1170,7 @@ function handleAddBookmarkSubmit(e) {
     try {
       const hostname = new URL(url).hostname;
       title = hostname.replace('www.', '');
-    } catch (e) {
+    } catch {
       title = url;
     }
   }
@@ -1292,7 +1294,7 @@ function handleSearchInput() {
     return;
   }
   
-  filteredSearchResults.forEach((result, idx) => {
+  filteredSearchResults.forEach(result => {
     const safeUrl = sanitizeUrl(result.url);
     const item = document.createElement('a');
     item.href = safeUrl;
@@ -1498,7 +1500,9 @@ function playSound(type) {
           initialETag = etag;
         }
       }
-    } catch (err) {}
+    } catch (err) {
+      void err;
+    }
   };
 
   checkAppVersion();
