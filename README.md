@@ -1,5 +1,10 @@
 # 🔖 Retro Bookmark Manager & URL Vault
 
+[![Tests](https://img.shields.io/badge/Tests-28%20passing-brightgreen?style=flat-square)](tests)
+[![Security](https://img.shields.io/badge/Security-Strix%20Defensive-brightgreen?style=flat-square)](api/bookmarks.js)
+[![Author](https://img.shields.io/badge/Author-Abhishek-orange?style=flat-square)](https://abhiishek.is-a.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+
 > A lightning-fast, local-first visual bookmark manager with a retro hacker terminal aesthetic, sound effects, instant keyboard navigation, and secure cross-device cloud sync.
 
 ---
@@ -121,13 +126,28 @@ npx vercel dev
 
 ---
 
-## 🤝 Contributing
+## 🔒 Multi-User Data Isolation & Performance Architecture
 
-Contributions, issues, and feature suggestions are welcome! Feel free to open a pull request or submit an issue.
+To guarantee that multiple people can use the application on the same or different devices without data mix-ups:
+- **Scoped LocalStorage Keys:** Every vault isolates its local cache under `zenmark_bookmarks_vault_${syncKey}` and `zenmark_categories_vault_${syncKey}`. Guest/offline users use `zenmark_bookmarks_vault_local`. Data between different keys or guest mode never overlaps or pollutes another vault.
+- **Direct Link & URL Parameter Support:** Links shared or bookmarked with `?syncKey=zen-...` or `?key=zen-...` automatically initialize that exact private vault without requiring manual pasting, and cleanly strip the parameter from the address bar for security.
+- **Multi-Vault Switcher:** Seamlessly switch between different vaults (e.g. Personal, Work, or Guest) or forget a vault when using a shared/public computer.
+- **Debounced Cloud Writes:** UI actions write synchronously to scoped `localStorage` (0ms lag), while cloud sync operations are debounced (600ms) to prevent Edge API 429 rate-limiting. Pending writes are automatically flushed on `beforeunload`.
+- **Zero Startup Freezing:** Asynchronous background cloud reconciliation allows immediate reading and clicking without blocking the main UI thread.
+
+---
+
+## 👨‍💻 Author & Creator
+
+Crafted by **Abhishek** ([abhiishek.is-a.dev](https://abhiishek.is-a.dev/)).
+
+- Portfolio: [https://abhiishek.is-a.dev/](https://abhiishek.is-a.dev/)
+- GitHub: [@codewithabhiishek](https://github.com/codewithabhiishek)
 
 ---
 
 ## 📝 License
 
 Distributed under the **MIT License**. Feel free to customize and make it your own!
+
 

@@ -1064,3 +1064,106 @@ dialog#search-dialog {
   z-index: -1 !important;
 }
 
+/* Multi-User Vault Switcher & Isolation UI */
+.sync-vault-switcher {
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sync-vault-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.vault-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.vault-item.is-active {
+  border-color: var(--green);
+  background: rgba(0, 255, 65, 0.08);
+}
+
+.vault-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.vault-key-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+}
+
+.vault-label-text {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.vault-item-actions {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.btn-vault-switch {
+  font-size: 9px;
+  font-family: 'Press Start 2P', monospace;
+  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--green);
+  color: var(--green);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.btn-vault-switch:hover {
+  background: var(--green);
+  color: var(--bg);
+}
+
+.btn-vault-remove {
+  font-size: 9px;
+  font-family: 'Press Start 2P', monospace;
+  padding: 4px 6px;
+  background: var(--bg);
+  border: 1px solid rgba(255, 0, 128, 0.4);
+  color: var(--pink);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.btn-vault-remove:hover {
+  background: var(--pink);
+  color: var(--bg);
+}
+
+.vault-badge-active {
+  font-size: 9px;
+  color: var(--green);
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  padding: 3px 6px;
+  background: rgba(0, 255, 65, 0.12);
+  border: 1px solid var(--green);
+  border-radius: 3px;
+}
+
+

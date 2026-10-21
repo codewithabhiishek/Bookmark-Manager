@@ -10,7 +10,10 @@ import {
   generateSecureKey,
   validateSyncKey,
   getGlyphForDomain,
-  validateSyncPayload
+  validateSyncPayload,
+  getScopedStorageKey,
+  extractSyncKeyFromUrl,
+  debounce
 } from './bookmarkUtils.js';
 
 // Speed-Trap timing tracker to defend against automated script spam (< 1.8s)
@@ -105,51 +108,126 @@ function getProjectIcon(host, origin) {
   return { iconUrl: `https://icons.duckduckgo.com/ip3/${host}.ico`, isProjectIcon: false };
 }
 
-// Application State
+// Application State & Multi-User Vault Isolation
 try {
   localStorage.setItem('zenmark_has_visited', 'true');
 } catch (err) {
   void err;
 }
 
+const VAULT_REGISTRY_KEY = 'zenmark_vault_registry';
+
+export function getKnownVaults() {
+  try {
+    const raw = localStorage.getItem(VAULT_REGISTRY_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list.filter(v => v && validateSyncKey(v.key)) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function registerKnownVault(key, label = '') {
+  if (!key || !validateSyncKey(key)) return;
+  try {
+    const vaults = getKnownVaults().filter(v => v.key !== key);
+    const customLabel = label || `Vault ${key.slice(4, 9).toUpperCase()}`;
+    vaults.unshift({ key, label: customLabel, lastActive: Date.now() });
+    localStorage.setItem(VAULT_REGISTRY_KEY, JSON.stringify(vaults.slice(0, 10)));
+  } catch {}
+}
+
+export function removeKnownVault(key) {
+  try {
+    const vaults = getKnownVaults().filter(v => v.key !== key);
+    localStorage.setItem(VAULT_REGISTRY_KEY, JSON.stringify(vaults));
+    localStorage.removeItem(getScopedStorageKey('bookmarks', key));
+    localStorage.removeItem(getScopedStorageKey('categories', key));
+  } catch {}
+}
+
+// 1. Detect sync key: query params take priority (?syncKey=... or ?key=...)
+let syncKey = '';
+try {
+  const urlSyncKey = extractSyncKeyFromUrl(window.location.search);
+  if (urlSyncKey) {
+    syncKey = urlSyncKey;
+    localStorage.setItem('zenmark_sync_key', syncKey);
+    registerKnownVault(syncKey);
+    // Sanitize address bar so secret key isn't exposed in browser history or referrer headers
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('syncKey');
+    cleanUrl.searchParams.delete('key');
+    window.history.replaceState({}, document.title, cleanUrl.toString());
+  } else {
+    syncKey = localStorage.getItem('zenmark_sync_key') || '';
+  }
+} catch {
+  syncKey = localStorage.getItem('zenmark_sync_key') || '';
+}
+
+if (syncKey) {
+  registerKnownVault(syncKey);
+}
+
+// 2. Scoped bookmark loader
 let bookmarks = defaultBookmarks;
-let syncKey = localStorage.getItem('zenmark_sync_key') || '';
-
-try {
-  const localBookmarks = localStorage.getItem('zenmark_bookmarks_v4');
-  if (localBookmarks) {
-    bookmarks = JSON.parse(localBookmarks);
+function loadBookmarksForActiveVault() {
+  const scopedKey = getScopedStorageKey('bookmarks', syncKey);
+  try {
+    const raw = localStorage.getItem(scopedKey);
+    if (raw) {
+      bookmarks = JSON.parse(raw);
+    } else if (!syncKey) {
+      // Migration: import legacy v4 bookmarks for existing local users
+      const legacy = localStorage.getItem('zenmark_bookmarks_v4');
+      bookmarks = legacy ? JSON.parse(legacy) : [...defaultBookmarks];
+    } else {
+      // New un-synced cloud vault: initialize cleanly without mixing previous user's bookmarks
+      bookmarks = [];
+    }
+  } catch {
+    bookmarks = [...defaultBookmarks];
   }
-} catch {
-  console.warn('Failed to parse bookmarks from localStorage, using defaults.');
-}
 
-bookmarks.forEach((b, index) => {
-  if (typeof b.sortIndex !== 'number') {
-    b.sortIndex = index;
-  }
-});
-bookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
-
-let savedCategories = null;
-try {
-  const localCats = localStorage.getItem('zenmark_categories_v4');
-  if (localCats) {
-    savedCategories = JSON.parse(localCats);
-  }
-} catch {
-  console.warn('Failed to parse categories from localStorage.');
-}
-
-let categories = savedCategories ? { ...savedCategories } : { ...defaultCategories };
-if (savedCategories) {
-  // Preserve saved user key order 100%; only append missing defaults at the end if any
-  Object.keys(defaultCategories).forEach(key => {
-    if (!(key in categories)) {
-      categories[key] = defaultCategories[key];
+  bookmarks.forEach((b, index) => {
+    if (typeof b.sortIndex !== 'number') {
+      b.sortIndex = index;
     }
   });
+  bookmarks.sort((a, b) => a.sortIndex - b.sortIndex);
 }
+
+// 3. Scoped category loader
+let categories = { ...defaultCategories };
+function loadCategoriesForActiveVault() {
+  const scopedKey = getScopedStorageKey('categories', syncKey);
+  let savedCats = null;
+  try {
+    const raw = localStorage.getItem(scopedKey);
+    if (raw) {
+      savedCats = JSON.parse(raw);
+    } else if (!syncKey) {
+      const legacyCats = localStorage.getItem('zenmark_categories_v4');
+      if (legacyCats) savedCats = JSON.parse(legacyCats);
+    }
+  } catch {
+    savedCats = null;
+  }
+
+  categories = savedCats ? { ...savedCats } : { ...defaultCategories };
+  if (savedCats) {
+    Object.keys(defaultCategories).forEach(key => {
+      if (!(key in categories)) {
+        categories[key] = defaultCategories[key];
+      }
+    });
+  }
+}
+
+loadBookmarksForActiveVault();
+loadCategoriesForActiveVault();
 let searchSelectedIndex = -1;
 let filteredSearchResults = [];
 
@@ -200,21 +278,19 @@ const btnDisconnectSync = document.getElementById('btn-disconnect-sync');
 
 // Event Listeners Initialization
 function init() {
-  if (syncKey) {
-    document.body.inert = true;
-    document.body.classList.add('is-syncing');
-  }
   renderAll();
   rotateMarqueeLogs();
   updateSyncUI();
   
-  // Sync bookmarks and categories if syncKey is configured
+  // Non-blocking background cloud sync
   if (syncKey) {
     syncFromCloud();
-  } else {
-    document.body.inert = false;
-    document.body.classList.remove('is-syncing');
   }
+
+  // Ensure any debounced pending writes are flushed when closing window
+  window.addEventListener('beforeunload', () => {
+    debouncedSyncToCloud.flush();
+  });
 
   // Cloud Sync Modal listeners
   if (btnSyncTrigger) {
@@ -345,7 +421,8 @@ function renderMarquee() {
   const textEl = document.getElementById('marquee-text');
   if (textEl) {
     const statusText = syncKey ? 'cloud synced' : 'local mode (offline)';
-    textEl.textContent = `» jugaad mode: on • ${bookmarks.length} bookmarks loaded • status: ${statusText} • welcome back abhishek «`;
+    const vaultTag = syncKey ? `vault: ${syncKey.slice(4, 9).toUpperCase()}` : 'vault: local';
+    textEl.textContent = `» jugaad mode: on • ${bookmarks.length} bookmarks loaded • status: ${statusText} • ${vaultTag} «`;
   }
 }
 
@@ -734,26 +811,31 @@ function syncCategoryDropdown() {
 }
 
 // ── Cloud Sync Management & Security ──────────────────────────────────────────
-function updateSyncUI() {
+function updateSyncStatusIndicator(state = 'synced') {
   if (syncKey) {
     if (btnSyncTrigger) {
-      btnSyncTrigger.textContent = '[☁️ SYNC: ACTIVE]';
-      btnSyncTrigger.classList.add('is-synced');
+      if (state === 'syncing') {
+        btnSyncTrigger.textContent = '[⏳ SYNCING...]';
+        btnSyncTrigger.classList.add('is-synced');
+      } else if (state === 'error') {
+        btnSyncTrigger.textContent = '[⚠️ SYNC RETRY]';
+        btnSyncTrigger.classList.remove('is-synced');
+      } else {
+        btnSyncTrigger.textContent = `[☁️ VAULT: ${syncKey.slice(4, 9).toUpperCase()}]`;
+        btnSyncTrigger.classList.add('is-synced');
+      }
     }
     if (syncStatusBox) {
       syncStatusBox.classList.add('is-synced');
     }
     if (syncStatusLabel) {
-      syncStatusLabel.textContent = 'Status: Cloud Synced (Private Key Active)';
-    }
-    if (syncActiveKey) {
-      syncActiveKey.value = syncKey;
-    }
-    if (btnCopySyncKey) {
-      btnCopySyncKey.style.display = 'inline-block';
-    }
-    if (btnDisconnectSync) {
-      btnDisconnectSync.style.display = 'block';
+      if (state === 'syncing') {
+        syncStatusLabel.textContent = `Status: Syncing Vault [${syncKey.slice(0, 8)}...]`;
+      } else if (state === 'error') {
+        syncStatusLabel.textContent = 'Status: Sync retry pending (Cached locally)';
+      } else {
+        syncStatusLabel.textContent = `Status: Connected to Private Cloud Vault [${syncKey.slice(0, 8)}...]`;
+      }
     }
   } else {
     if (btnSyncTrigger) {
@@ -766,31 +848,131 @@ function updateSyncUI() {
     if (syncStatusLabel) {
       syncStatusLabel.textContent = 'Status: Local Storage Only (Offline / Guest)';
     }
-    if (syncActiveKey) {
-      syncActiveKey.value = '';
-    }
-    if (btnCopySyncKey) {
-      btnCopySyncKey.style.display = 'none';
-    }
-    if (btnDisconnectSync) {
-      btnDisconnectSync.style.display = 'none';
+  }
+}
+
+function updateSyncUI() {
+  updateSyncStatusIndicator('synced');
+
+  if (syncActiveKey) {
+    syncActiveKey.value = syncKey || '';
+  }
+  if (btnCopySyncKey) {
+    btnCopySyncKey.style.display = syncKey ? 'inline-block' : 'none';
+  }
+  if (btnDisconnectSync) {
+    btnDisconnectSync.style.display = syncKey ? 'block' : 'none';
+  }
+
+  // Render Saved Vaults list
+  const vaultSwitcherContainer = document.getElementById('sync-vault-switcher');
+  const vaultListContainer = document.getElementById('sync-vault-list');
+  if (vaultSwitcherContainer && vaultListContainer) {
+    const knownVaults = getKnownVaults();
+    if (knownVaults.length > 0) {
+      vaultSwitcherContainer.style.display = 'flex';
+      vaultListContainer.innerHTML = '';
+
+      knownVaults.forEach(vault => {
+        const item = document.createElement('div');
+        const isActive = vault.key === syncKey;
+        item.className = `vault-item ${isActive ? 'is-active' : ''}`;
+        
+        const keyDisplay = `${vault.key.slice(0, 8)}...${vault.key.slice(-4)}`;
+        item.innerHTML = `
+          <div class="vault-info">
+            <span class="vault-key-text">${escapeHTML(vault.label || keyDisplay)}</span>
+            <span class="vault-label-text">${escapeHTML(keyDisplay)}</span>
+          </div>
+          <div class="vault-item-actions">
+            ${isActive
+              ? '<span class="vault-badge-active">ACTIVE</span>'
+              : `<button type="button" class="btn-vault-switch" data-key="${escapeHTML(vault.key)}">[SWITCH]</button>`
+            }
+            <button type="button" class="btn-vault-remove" data-key="${escapeHTML(vault.key)}" title="Remove vault from this machine">[X]</button>
+          </div>
+        `;
+        vaultListContainer.appendChild(item);
+      });
+
+      // Bind button events
+      vaultListContainer.querySelectorAll('.btn-vault-switch').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetKey = btn.getAttribute('data-key');
+          if (targetKey) switchVault(targetKey);
+        });
+      });
+
+      vaultListContainer.querySelectorAll('.btn-vault-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetKey = btn.getAttribute('data-key');
+          if (targetKey) {
+            removeKnownVault(targetKey);
+            if (targetKey === syncKey) {
+              handleDisconnectSync();
+            } else {
+              updateSyncUI();
+            }
+            showToast('🗑️ Vault removed from local machine.', 2000);
+          }
+        });
+      });
+    } else {
+      vaultSwitcherContainer.style.display = 'none';
     }
   }
+
   renderMarquee();
+}
+
+async function switchVault(targetKey) {
+  if (targetKey === syncKey) return;
+  playSound('click');
+  debouncedSyncToCloud.flush();
+
+  syncKey = targetKey;
+  if (syncKey) {
+    localStorage.setItem('zenmark_sync_key', syncKey);
+    registerKnownVault(syncKey);
+  } else {
+    localStorage.removeItem('zenmark_sync_key');
+  }
+
+  loadBookmarksForActiveVault();
+  loadCategoriesForActiveVault();
+  updateSyncUI();
+  renderAll();
+
+  if (syncKey) {
+    showToast(`🔑 Switched to vault [${syncKey.slice(0, 8)}...]`, 2500);
+    await syncFromCloud();
+  } else {
+    showToast('🔒 Switched to Local / Guest vault.', 2500);
+  }
 }
 
 async function handleGenerateNewSyncKey() {
   playSound('success');
+  debouncedSyncToCloud.flush();
+
   const newKey = generateSecureKey();
   syncKey = newKey;
   localStorage.setItem('zenmark_sync_key', syncKey);
+  registerKnownVault(syncKey);
+
+  // Seed new vault's scoped storage with current bookmarks
+  const scopedBKey = getScopedStorageKey('bookmarks', syncKey);
+  const scopedCKey = getScopedStorageKey('categories', syncKey);
+  localStorage.setItem(scopedBKey, JSON.stringify(bookmarks));
+  localStorage.setItem(scopedCKey, JSON.stringify(categories));
+
   updateSyncUI();
   
-  // Instantly upload current bookmarks to the new cloud vault
-  showToast('⚡ Uploading your links to new private vault...', 2500);
+  showToast('⚡ Initializing your private cloud vault...', 2500);
   await syncToCloud();
   
-  // Copy to clipboard
   try {
     await navigator.clipboard.writeText(newKey);
     showToast('🔑 New Sync Key created & copied to clipboard!', 4000);
@@ -811,14 +993,22 @@ async function handleConnectSyncKey() {
   }
   
   playSound('click');
+  debouncedSyncToCloud.flush();
+
   syncKey = enteredKey;
   localStorage.setItem('zenmark_sync_key', syncKey);
+  registerKnownVault(syncKey);
   if (syncInputKey) syncInputKey.value = '';
+
+  // Load any local cache for this vault first (0ms UI wait)
+  loadBookmarksForActiveVault();
+  loadCategoriesForActiveVault();
   updateSyncUI();
+  renderAll();
   
   showToast('🔄 Connecting and syncing bookmarks from cloud...', 2500);
   await syncFromCloud();
-  showToast(' Cloud Sync Connected Successfully!', 3000);
+  showToast('✅ Cloud Sync Connected Successfully!', 3000);
 }
 
 async function handleCopySyncKey() {
@@ -834,10 +1024,16 @@ async function handleCopySyncKey() {
 
 function handleDisconnectSync() {
   playSound('click');
+  debouncedSyncToCloud.flush();
+
   syncKey = '';
   localStorage.removeItem('zenmark_sync_key');
+  
+  loadBookmarksForActiveVault();
+  loadCategoriesForActiveVault();
   updateSyncUI();
-  showToast(' Cloud sync disconnected. Using Local-Only mode.', 3000);
+  renderAll();
+  showToast('🔒 Cloud sync disconnected. Using Local-Only mode.', 3000);
 }
 
 // Logic Events
@@ -847,18 +1043,25 @@ function saveState() {
     b.sortIndex = index;
   });
   
-  localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
-  localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
+  const scopedBKey = getScopedStorageKey('bookmarks', syncKey);
+  const scopedCKey = getScopedStorageKey('categories', syncKey);
+
+  localStorage.setItem(scopedBKey, JSON.stringify(bookmarks));
+  localStorage.setItem(scopedCKey, JSON.stringify(categories));
   
-  syncToCloud();
+  if (syncKey) {
+    updateSyncStatusIndicator('syncing');
+    debouncedSyncToCloud();
+  }
 }
 
 async function syncToCloud() {
   if (!syncKey) {
-    // Local-only / Guest mode: bookmarks remain safely in browser localStorage
+    updateSyncStatusIndicator('local');
     return;
   }
   try {
+    updateSyncStatusIndicator('syncing');
     const payload = { bookmarks, categories };
     const res = await fetch('/api/bookmarks', {
       method: 'POST',
@@ -868,22 +1071,27 @@ async function syncToCloud() {
       },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) {
+    if (res.ok) {
+      updateSyncStatusIndicator('synced');
+    } else {
       console.warn('[Sync] Failed to sync data to cloud database.');
+      updateSyncStatusIndicator('error');
     }
   } catch (err) {
     console.error('[Sync] Error syncing to cloud:', err);
+    updateSyncStatusIndicator('error');
   }
 }
 
+const debouncedSyncToCloud = debounce(syncToCloud, 600);
+
 async function syncFromCloud() {
   if (!syncKey) {
-    document.body.inert = false;
-    document.body.classList.remove('is-syncing');
     updateSyncUI();
     return;
   }
   try {
+    updateSyncStatusIndicator('syncing');
     const res = await fetch('/api/bookmarks', {
       headers: {
         'x-sync-key': syncKey
@@ -896,6 +1104,7 @@ async function syncFromCloud() {
         const validation = validateSyncPayload(data);
         if (!validation.valid) {
           console.warn('[Sync] Received invalid data schema from cloud:', validation.error);
+          updateSyncStatusIndicator('error');
           return;
         }
 
@@ -922,35 +1131,42 @@ async function syncFromCloud() {
         const newCategoriesStr = JSON.stringify(cleanCategories);
 
         if (currentBookmarksStr === newBookmarksStr && currentCategoriesStr === newCategoriesStr) {
-          console.log('[Sync] Data is identical, skipping re-render.');
+          updateSyncStatusIndicator('synced');
           return;
         }
 
         bookmarks = newBookmarks;
         categories = cleanCategories;
         
-        localStorage.setItem('zenmark_bookmarks_v4', JSON.stringify(bookmarks));
-        localStorage.setItem('zenmark_categories_v4', JSON.stringify(categories));
+        const scopedBKey = getScopedStorageKey('bookmarks', syncKey);
+        const scopedCKey = getScopedStorageKey('categories', syncKey);
+        localStorage.setItem(scopedBKey, JSON.stringify(bookmarks));
+        localStorage.setItem(scopedCKey, JSON.stringify(categories));
+
         renderAll();
+        updateSyncStatusIndicator('synced');
         console.log('[Sync] Successfully synchronized data from cloud database.');
       } else {
-        // Cloud is empty for this key. Initialize cloud database with current local data so nothing is lost.
-        const hasLocalStorage = localStorage.getItem('zenmark_bookmarks_v4') !== null;
-        if (hasLocalStorage) {
-          console.log('[Sync] Cloud is empty for this key. Initializing cloud vault with current local data...');
+        // Cloud is empty for this key.
+        // If this specific vault has scoped local bookmarks, upload them to initialize cloud:
+        const scopedBKey = getScopedStorageKey('bookmarks', syncKey);
+        const hasScopedLocal = localStorage.getItem(scopedBKey) !== null;
+        if (hasScopedLocal && bookmarks.length > 0) {
+          console.log('[Sync] Initializing new cloud vault with your bookmarks...');
           await syncToCloud();
         } else {
-          console.log('[Sync] Cloud is empty for this key, and local storage is empty.');
+          console.log('[Sync] Cloud vault is empty and clean for this key.');
+          updateSyncStatusIndicator('synced');
         }
       }
     } else if (res.status === 401 || res.status === 400) {
       console.warn('[Sync] Unauthorized or invalid sync key.');
+      updateSyncStatusIndicator('error');
     }
   } catch (err) {
     console.error('[Sync] Error syncing from cloud:', err);
+    updateSyncStatusIndicator('error');
   } finally {
-    document.body.inert = false;
-    document.body.classList.remove('is-syncing');
     updateSyncUI();
   }
 }
@@ -1401,10 +1617,10 @@ function showToast(message, isWarning = false) {
 const sysLogs = [
   "jugaad mode: active",
   "system status: nominal",
-  "localstorage database: synced",
+  "local-first database: ready",
   "press '/' key for search hub",
   "scanline display frequency: 60hz",
-  "welcome abhishek @localhost"
+  "multi-user cloud locker: isolated"
 ];
 let currentLogIndex = 0;
 
@@ -1414,7 +1630,9 @@ function rotateMarqueeLogs() {
   
   setInterval(() => {
     currentLogIndex = (currentLogIndex + 1) % sysLogs.length;
-    const msg = `» ${sysLogs[currentLogIndex].toUpperCase()} • ${bookmarks.length} BOOKMARKS LOADED • STATUS: SYNCED • WELCOME BACK ABHISHEK «`;
+    const statusText = syncKey ? 'CLOUD SYNCED' : 'LOCAL OFFLINE';
+    const vaultTag = syncKey ? `VAULT: ${syncKey.slice(4, 9).toUpperCase()}` : 'VAULT: LOCAL';
+    const msg = `» ${sysLogs[currentLogIndex].toUpperCase()} • ${bookmarks.length} BOOKMARKS LOADED • STATUS: ${statusText} • ${vaultTag} «`;
     marqueeText.textContent = msg;
   }, 4000);
 }
