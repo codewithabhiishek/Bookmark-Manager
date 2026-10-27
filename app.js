@@ -13,7 +13,8 @@ import {
   validateSyncPayload,
   getScopedStorageKey,
   extractSyncKeyFromUrl,
-  debounce
+  debounce,
+  haptics
 } from './bookmarkUtils.js';
 
 // Speed-Trap timing tracker to defend against automated script spam (< 1.8s)
@@ -1418,6 +1419,7 @@ function deleteBookmark(id) {
   saveState();
   renderAll();
   playSound('click');
+  haptics.delete();
   showToast(`Deleted link "${b.title}"`);
 }
 
@@ -1436,6 +1438,7 @@ function deleteCategory(catKey) {
   saveState();
   renderAll();
   playSound('click');
+  haptics.delete();
   showToast(`Deleted category "${catName}"`);
 }
 
@@ -1455,6 +1458,7 @@ function togglePin(id) {
   saveState();
   renderAll();
   playSound('star');
+  haptics.pin();
 }
 
 function copyLink(url, btnEl, tooltipEl) {
@@ -1594,6 +1598,12 @@ function handleGlobalKeydown(e) {
 
 // Retro-style terminal warnings and notification alerts
 function showToast(message, isWarning = false) {
+  if (isWarning) {
+    haptics.error();
+  } else {
+    haptics.tap();
+  }
+
   const toast = document.createElement('div');
   toast.className = 'toast';
   if (isWarning) {

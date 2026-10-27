@@ -1,17 +1,20 @@
 # 🔖 Retro Bookmark Manager & URL Vault
 
-[![Tests](https://img.shields.io/badge/Tests-28%20passing-brightgreen?style=flat-square)](tests)
+[![Tests](https://img.shields.io/badge/Tests-32%20passing-brightgreen?style=flat-square)](tests)
+[![Vulnerabilities](https://img.shields.io/badge/Vulnerabilities-0-brightgreen?style=flat-square)](package.json)
 [![Security](https://img.shields.io/badge/Security-Strix%20Defensive-brightgreen?style=flat-square)](api/bookmarks.js)
+[![Haptics](https://img.shields.io/badge/Haptics-Tactile%20Mobile-blueviolet?style=flat-square)](haptics.js)
 [![Author](https://img.shields.io/badge/Author-Abhishek-orange?style=flat-square)](https://abhiishek.is-a.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-> A lightning-fast, local-first visual bookmark manager with a retro hacker terminal aesthetic, sound effects, instant keyboard navigation, and secure cross-device cloud sync.
+> A lightning-fast, local-first visual bookmark manager with a retro hacker terminal aesthetic, sound effects, tactile mobile haptic feedback, instant keyboard navigation, and secure cross-device cloud sync.
 
 ---
 
 ## ✨ Features
 
 - **⚡ Zero Friction (Local-First by Default):** Use the app immediately with zero logins, signups, or popups. All bookmarks persist in browser `localStorage`.
+- **📳 Tactile Mobile Haptics Engine:** Responsive physical vibration feedback for pinning, deleting, saving, cloud syncing, and terminal alerts (`haptics.js`).
 - **🔑 Secure Secret Sync Keys:** Optional cloud sync across laptop, phone, and tablet using high-entropy private passkeys.
 - **🛡️ 100% Privacy & Open-Source Safe:** Open-source visitors safely use their own offline storage. No stranger can view, edit, or overwrite your personal links.
 - **🔍 Spotlight Search (`/` Shortcut):** Press `/` anywhere to launch a command-palette style search with arrow-key navigation and instant URL filtering.

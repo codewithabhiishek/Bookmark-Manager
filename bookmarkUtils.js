@@ -344,3 +344,5 @@ export function debounce(fn, waitMs = 500) {
   return debounced;
 }
 
+export { haptics, hapticPatterns, isHapticsSupported, triggerHaptic } from './haptics.js';
+
