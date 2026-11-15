@@ -1,6 +1,6 @@
 # 🔖 Retro Bookmark Manager & URL Vault
 
-[![Tests](https://img.shields.io/badge/Tests-32%20passing-brightgreen?style=flat-square)](tests)
+[![Tests](https://img.shields.io/badge/Tests-37%20passing-brightgreen?style=flat-square)](tests)
 [![Vulnerabilities](https://img.shields.io/badge/Vulnerabilities-0-brightgreen?style=flat-square)](package.json)
 [![Security](https://img.shields.io/badge/Security-Strix%20Defensive-brightgreen?style=flat-square)](api/bookmarks.js)
 [![Haptics](https://img.shields.io/badge/Haptics-Tactile%20Mobile-blueviolet?style=flat-square)](haptics.js)
@@ -120,11 +120,30 @@ npx vercel dev
 ├── assets/
 │   └── project-icons/        # Custom project favicon assets
 ├── index.html                # Application layout & dialog templates
+├── app.html                  # Legacy standalone entrypoint
 ├── style.css                 # Retro terminal styling & CRT scanline effects
 ├── app.js                    # Application logic, sync management & UI rendering
+├── bookmarkUtils.js          # Pure utility functions & security guards
+├── storageService.js         # Scoped multi-vault storage service & adapter
+├── haptics.js                # Tactile mobile haptic feedback engine
+├── tests/                    # 37 automated unit tests across 7 test suites
 ├── favicon.ico / .svg        # Application branding favicons
 ├── vercel.json               # Vercel deployment & routing configuration
 └── README.md                 # Project documentation
+```
+
+---
+
+## 🧪 Testing & Verification
+
+Run the full automated test suite using Node's built-in test runner:
+
+```bash
+# Run all unit tests (37 tests across 7 suites)
+npm test
+
+# Security audit (0 vulnerabilities)
+npm audit
 ```
 
 ---

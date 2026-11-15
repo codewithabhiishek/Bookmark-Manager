@@ -931,6 +931,7 @@ function updateSyncUI() {
 async function switchVault(targetKey) {
   if (targetKey === syncKey) return;
   playSound('click');
+  haptics.sync();
   debouncedSyncToCloud.flush();
 
   syncKey = targetKey;
@@ -1213,6 +1214,7 @@ function handleEditCategorySubmit(e) {
     saveState();
     renderAll();
     playSound('success');
+    haptics.save();
     editCatDialog.close();
     showToast(`Renamed category to "${newName}"`);
   }
@@ -1254,6 +1256,7 @@ function handleAddCategorySubmit(e) {
   saveState();
   renderAll();
   playSound('success');
+  haptics.save();
   addCatDialog.close();
   showToast(`Created category "${name}"`);
 }
@@ -1339,6 +1342,7 @@ function handleEditBookmarkSubmit(e) {
     saveState();
     renderAll();
     playSound('success');
+    haptics.save();
     editDialog.close();
     showToast(`Updated link "${title}"`);
   }
@@ -1407,6 +1411,7 @@ function handleAddBookmarkSubmit(e) {
   saveState();
   renderAll();
   playSound('success');
+  haptics.save();
   addDialog.close();
   showToast(`Added link "${title}"`);
 }
